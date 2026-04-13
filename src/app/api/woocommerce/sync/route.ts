@@ -4,43 +4,60 @@ import clientPromise from '@/lib/mongodb';
 const CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
 const CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
 const BASE64_KEY = process.env.WC_BAESE64_KEY;
+const SYNC_SECRET_KEY = process.env.SYNC_SECRET_KEY;
+
 const getAuthHeaders = () => {
-  const credentials = `${CONSUMER_KEY}:${CONSUMER_SECRET}`;
-  const encodedCredentials = Buffer.from(credentials).toString('base64');
+  const encodedCredentials = BASE64_KEY || Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
+  
   return {
-    'Authorization': `Basic ${BASE64_KEY} || ${encodedCredentials}`,
+    'Authorization': `Basic ${encodedCredentials}`,
     'Content-Type': 'application/json',
   };
 };
 
 export async function GET() {
-  console.log("🔄 Bắt đầu tiến trình đồng bộ WooCommerce -> MongoDB");
-  console.time("⏱️ Thời gian đồng bộ");
 
   try {
     let allProducts: any[] = [];
     let page = 1;
     let totalPages = 1;
 
-    // 1. Kéo toàn bộ dữ liệu từ WooCommerce (Giống hệt code cũ của bạn)
     while (page <= totalPages) {
       console.log(`⏳ Đang kéo trang ${page}/${totalPages} từ WooCommerce...`);
+      
       const url = new URL(`https://handdn.com/wp-json/wc/v3/products`);
       url.searchParams.append('per_page', '100');
       url.searchParams.append('page', page.toString());
       url.searchParams.append('status', 'publish');
-    //   url.searchParams.append('_fields', 'id,name,price,permalink,images,attributes,categories,tags');
+      
+      // BẮT BUỘC MỞ DÒNG NÀY ĐỂ KHÔNG BỊ TRÀN RAM
+      url.searchParams.append('_fields', 'id,name,price,permalink,images,attributes,categories,tags');
 
-      const response = await fetch(url, {
+      console.log(`\n=== DEBUG: Request URL (Trang ${page}) ===`);
+      console.log(url.toString());
+
+      // Gọi fetch với url.toString()
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: getAuthHeaders(),
         cache: 'no-store',
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("=== DEBUG ERROR: Chi tiết lỗi từ API WooCommerce ===");
+        console.error(`Status HTTP: ${response.status}`);
+        console.error(`Nội dung lỗi (Raw):`, errorText);
+        throw new Error(`HTTP ${response.status} - ${errorText}`);
+      }
+
       if (page === 1) totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1', 10);
+      console.log(`=== DEBUG: Header x-wp-totalpages (Tổng số trang) ===`, response.headers.get('x-wp-totalpages'));
 
       const products = await response.json();
+      
+      console.log(`=== DEBUG: Toàn bộ dữ liệu RAW trả về từ WooCommerce (Trang ${page}) ===`);
+      console.dir(products, { depth: null });
       
       const formatted = products.map((p: any) => ({
         id: p.id, // ID gốc của WooCommerce
@@ -48,10 +65,14 @@ export async function GET() {
         price: p.price,
         link: p.permalink,
         image: p.images && p.images.length > 0 ? p.images[0].src : '', 
+        thumbnail: p.images && p.images.length > 0 ? p.images[0].thumbnail : '',
         attributes: p.attributes,
         categories: p.categories,
         tags: p.tags,
       }));
+
+      console.log(`=== DEBUG: Toàn bộ dữ liệu sau khi Format để đưa vào MongoDB (Trang ${page}) ===`);
+      console.dir(formatted, { depth: null });
       
       allProducts = [...allProducts, ...formatted];
       page++;
@@ -65,7 +86,11 @@ export async function GET() {
 
     // Xóa sạch dữ liệu cũ và chèn toàn bộ dữ liệu mới (Full Sync)
     await collection.deleteMany({});
-    await collection.insertMany(allProducts);
+    
+    // Chỉ chèn nếu có dữ liệu để tránh lỗi MongoDB
+    if (allProducts.length > 0) {
+      await collection.insertMany(allProducts);
+    }
 
     console.timeEnd("⏱️ Thời gian đồng bộ");
     return NextResponse.json({ 

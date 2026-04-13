@@ -9,18 +9,41 @@ export default function FaceUploader() {
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadLink, setUploadLink] = useState<string>('');
 
-  // Khởi tạo Session ID ngẫu nhiên khi component load
+  // Khởi tạo Session ID và bắt đầu theo dõi (Polling)
   useEffect(() => {
-    // Dùng crypto.randomUUID có sẵn của trình duyệt để tạo ID độc nhất
+    // 1. Tạo Session ID
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
     
-    // Tạo link dành riêng cho điện thoại (Chúng ta sẽ làm trang này sau)
-    // VD: https://localhost:3000/mobile-upload?session=...
+    // Nếu bạn đang test trên máy tính (localhost), 
+    // điện thoại chung mạng Wifi phải dùng địa chỉ IP IPv4 của máy tính thì mới quét được.
+    // Lát nữa đẩy lên Vercel thì sẽ tự động dùng domain thật.
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
     setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
     
-    // TODO: Bắt đầu gọi API Polling để chờ ảnh từ điện thoại ở đây
+    // 2. Chức năng Polling: Hỏi thăm API mỗi 2.5 giây
+    let intervalId: NodeJS.Timeout;
+
+    const checkUpload = async () => {
+      try {
+        const res = await fetch(`/api/upload?sessionId=${newSessionId}`);
+        const data = await res.json();
+        
+        if (data.success && data.image) {
+          // 🎉 Bắt được ảnh từ điện thoại gửi lên!
+          setUploadedImage(data.image);
+          clearInterval(intervalId); // Có ảnh rồi thì ngừng hỏi thăm cho đỡ nặng
+        }
+      } catch (err) {
+        console.error("Lỗi khi kiểm tra ảnh:", err);
+      }
+    };
+
+    // Bắt đầu vòng lặp hỏi thăm
+    intervalId = setInterval(checkUpload, 2500);
+
+    // Dọn dẹp bộ nhớ khi tắt component
+    return () => clearInterval(intervalId);
   }, []);
 
   // Xử lý khi khách hàng Kéo/Thả hoặc Chọn file trên máy tính

@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import type { Product } from '@/lib/woocommerce';
 
 const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Apple Watch Series Band', 'Apple Watch Ultra Band' ,'Vintage Watch Straps'];
+// Thêm danh sách các thuộc tính được phép hiển thị trên bộ lọc (Thay đổi theo tên thuộc tính thực tế trên WooCommerce của bạn)
+const ALLOWED_ATTRIBUTES = ['Color', 'Size', 'Material'];
 
 export default function StrapSelector({ initialProducts }: { initialProducts: Product[] }) {
   // 1. Quản lý State cho Lọc và Tìm kiếm
@@ -29,8 +31,11 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
       
       // Lấy tất cả thuộc tính (Màu sắc, Loại da, Size...)
       product.attributes?.forEach(attr => {
-        if (!attrMap.has(attr.name)) attrMap.set(attr.name, new Set());
-        attr.options.forEach(opt => attrMap.get(attr.name)!.add(opt));
+        // Chỉ thêm vào bộ lọc nếu thuộc tính đó nằm trong danh sách ALLOWED_ATTRIBUTES
+        if (ALLOWED_ATTRIBUTES.includes(attr.name)) {
+          if (!attrMap.has(attr.name)) attrMap.set(attr.name, new Set());
+          attr.options.forEach(opt => attrMap.get(attr.name)!.add(opt));
+        }
       });
     });
 
