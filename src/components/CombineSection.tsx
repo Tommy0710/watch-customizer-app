@@ -67,14 +67,15 @@ export default function CombineSection() {
     setIsGenerating(true);
     try {
       // 1. Chạy hàm ghép thô 2 ảnh lại thành 1
-      const compositeBase64 = await mergeImagesWithCanvas(selectedStrap.image, uploadedFace);
+      //const compositeBase64 = await mergeImagesWithCanvas(selectedStrap.image, uploadedFace);
       
       // 2. Gửi bức ảnh đã ghép cho AI
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          compositeImage: compositeBase64 
+          strapImage: selectedStrap.image, // URL (vd: https://cdn.handdn.com/...)
+          faceImage: uploadedFace          // Base64 (vd: data:image/jpeg;base64,...)
         }),
       });
 
@@ -117,7 +118,7 @@ export default function CombineSection() {
               <p className="text-xs text-black font-semibold uppercase tracking-widest">AI đang thiết kế...</p>
             </div>
           ) : resultImage ? (
-             <img src={resultImage} alt="Kết quả AI" className="w-full h-full object-contain shadow-lg" />
+             <img src={resultImage} alt="Kết quả AI" className="w-full h-full object-contain" />
           ) : (
             <p className="text-center text-sm px-4">Kết quả kết hợp bằng AI sẽ hiển thị tại đây sau khi bạn nhấn Combine.</p>
           )}
