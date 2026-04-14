@@ -15,6 +15,12 @@ function MobileUploadClient() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
+      // Kiểm tra chất lượng ảnh chụp từ điện thoại
+      if (file.size < 20 * 1024) {
+        alert("Ảnh chụp không đủ chất lượng. Vui lòng chụp gần hơn hoặc ở nơi đủ sáng!");
+        return;
+      }
+
       // Chuyển ảnh thành định dạng Base64 để gửi qua API
       const reader = new FileReader();
       reader.onloadend = () => {

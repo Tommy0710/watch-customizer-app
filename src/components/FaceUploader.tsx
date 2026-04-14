@@ -4,17 +4,21 @@ import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { QRCodeSVG } from 'qrcode.react';
 import Cropper from 'react-easy-crop';
+import { useAppStore } from '@/store/useAppStore'; // IMPORT KHO TRẠNG THÁI ZUSTAND
 
 export default function FaceUploader() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadLink, setUploadLink] = useState<string>('');
+  
+  // Lấy hàm cập nhật ảnh từ Zustand
+  const { setUploadedFace } = useAppStore();
 
-  // State cho việc chỉnh sửa ảnh
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
 
+  // 1. Kiểm tra ảnh từ điện thoại gửi lên (Polling)
   useEffect(() => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
@@ -25,25 +29,56 @@ export default function FaceUploader() {
       try {
         const res = await fetch(`/api/upload?sessionId=${newSessionId}`);
         const data = await res.json();
+        
         if (data.success && data.image) {
-          setUploadedImage(data.image);
+          setUploadedImage(data.image); // Ảnh này đã là Base64 từ điện thoại
+          setUploadedFace(data.image);  // Cập nhật luôn vào Store để sẵn sàng Combine
+          clearInterval(intervalId);
         }
       } catch (err) {
         console.error("Lỗi khi kiểm tra ảnh:", err);
       }
     };
 
-    const intervalId = setInterval(checkUpload, 2500);
+    let intervalId = setInterval(checkUpload, 2500);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [setUploadedFace]);
 
+  // 2. Xử lý Kéo Thả / Upload trực tiếp bằng FileReader (Base64)
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      const imageUrl = URL.createObjectURL(file);
-      setUploadedImage(imageUrl);
+      
+      // Kiểm tra dung lượng
+      if (file.size < 20 * 1024) {
+        alert("Ảnh quá mờ hoặc dung lượng quá thấp. Vui lòng chọn ảnh rõ nét hơn!");
+        return;
+      }
+
+      // Đọc file thành Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        // Kiểm tra kích thước hình ảnh
+        const img = new Image();
+        img.src = base64String;
+        img.onload = () => {
+          if (img.width < 400 || img.height < 400) {
+            alert(`Kích thước ảnh là ${img.width}x${img.height}. Yêu cầu tối thiểu 400x400 pixel!`);
+            return;
+          }
+          
+          // Hoàn tất kiểm tra -> Cập nhật UI và Store
+          setUploadedImage(base64String);
+          setUploadedFace(base64String);
+        };
+      };
+      
+      // Kích hoạt việc đọc file
+      reader.readAsDataURL(file);
     }
-  }, []);
+  }, [setUploadedFace]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -54,12 +89,13 @@ export default function FaceUploader() {
   const handleRemoveImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setUploadedImage(null);
+    setUploadedFace(null); // Xóa ảnh khỏi Store
     setZoom(1);
     setRotation(0);
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-white rounded-lg border border-gray-100 shadow-sm p-4 overflow-hidden relative">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-white overflow-hidden relative">
       
       {uploadedImage ? (
         <div className="relative w-full h-full flex flex-col">
@@ -173,7 +209,7 @@ export default function FaceUploader() {
           </div>
 
           <div className="w-full flex items-center justify-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <div className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-1.5 bg-white rounded-lg shadow-sm border w-[84px] h-[84px] border-gray-200">
               {uploadLink && (
                 <QRCodeSVG 
                   value={uploadLink} 

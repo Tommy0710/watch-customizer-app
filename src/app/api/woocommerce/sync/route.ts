@@ -29,6 +29,7 @@ export async function GET() {
       url.searchParams.append('per_page', '100');
       url.searchParams.append('page', page.toString());
       url.searchParams.append('status', 'publish');
+      url.searchParams.append('stock_status', 'instock');
       
       // BẮT BUỘC MỞ DÒNG NÀY ĐỂ KHÔNG BỊ TRÀN RAM
       url.searchParams.append('_fields', 'id,name,price,permalink,images,attributes,categories,tags');

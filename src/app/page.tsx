@@ -2,6 +2,7 @@
 import { getDatabaseProducts } from '@/lib/woocommerce'; // <-- ĐÃ SỬA: Import hàm gọi Database
 import StrapSelector from '@/components/StrapSelector';
 import FaceUploader from '@/components/FaceUploader';
+import CombineSection from '@/components/CombineSection';
 
 export default async function CustomizerApp() {
   // 1. Lấy dữ liệu siêu tốc trực tiếp từ MongoDB Atlas
@@ -38,19 +39,9 @@ export default async function CustomizerApp() {
         </div>
 
         {/* CỘT PHẢI - Kết quả AI */}
-        <div className="p-6 flex flex-col bg-[#FAFAFA] overflow-hidden h-full">
-          <h2 className="text-sm tracking-widest text-gray-400 uppercase font-semibold mb-4 text-center flex-shrink-0">
-            3. AI Generated Result
-          </h2>
-          <div className="flex-1 w-full rounded-lg flex items-center justify-center text-gray-400 bg-white border border-gray-100 shadow-sm overflow-hidden text-center p-4">
-            Kết quả kết hợp bằng AI sẽ hiển thị tại đây sau khi bạn nhấn Combine.
-          </div>
+        <div className="flex flex-col bg-[#FAFAFA] overflow-hidden h-full">
+          <CombineSection />
         </div>
-
-        {/* NÚT COMBINE (Cố định ở giữa) */}
-        <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-black text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white z-20 hover:scale-105 transition-transform duration-300">
-          <span className="text-xs font-bold tracking-widest text-center">COMBINE</span>
-        </button>
       </div>
     </main>
   );
