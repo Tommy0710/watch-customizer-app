@@ -70,9 +70,6 @@ export async function GET() {
         categories: p.categories,
         tags: p.tags,
       }));
-
-      console.log(`=== DEBUG: Toàn bộ dữ liệu sau khi Format để đưa vào MongoDB (Trang ${page}) ===`);
-      console.dir(formatted, { depth: null });
       
       allProducts = [...allProducts, ...formatted];
       page++;

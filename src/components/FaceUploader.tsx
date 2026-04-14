@@ -3,106 +3,153 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { QRCodeSVG } from 'qrcode.react';
+import Cropper from 'react-easy-crop';
 
 export default function FaceUploader() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadLink, setUploadLink] = useState<string>('');
 
-  // Khởi tạo Session ID và bắt đầu theo dõi (Polling)
+  // State cho việc chỉnh sửa ảnh
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+
   useEffect(() => {
-    // 1. Tạo Session ID
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
-    
-    // Nếu bạn đang test trên máy tính (localhost), 
-    // điện thoại chung mạng Wifi phải dùng địa chỉ IP IPv4 của máy tính thì mới quét được.
-    // Lát nữa đẩy lên Vercel thì sẽ tự động dùng domain thật.
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
     setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
-    
-    // 2. Chức năng Polling: Hỏi thăm API mỗi 2.5 giây
-    let intervalId: NodeJS.Timeout;
 
     const checkUpload = async () => {
       try {
         const res = await fetch(`/api/upload?sessionId=${newSessionId}`);
         const data = await res.json();
-        
         if (data.success && data.image) {
-          // 🎉 Bắt được ảnh từ điện thoại gửi lên!
           setUploadedImage(data.image);
-          clearInterval(intervalId); // Có ảnh rồi thì ngừng hỏi thăm cho đỡ nặng
         }
       } catch (err) {
         console.error("Lỗi khi kiểm tra ảnh:", err);
       }
     };
 
-    // Bắt đầu vòng lặp hỏi thăm
-    intervalId = setInterval(checkUpload, 2500);
-
-    // Dọn dẹp bộ nhớ khi tắt component
+    const intervalId = setInterval(checkUpload, 2500);
     return () => clearInterval(intervalId);
   }, []);
 
-  // Xử lý khi khách hàng Kéo/Thả hoặc Chọn file trên máy tính
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
-      const file = acceptedFiles[0]; // Chỉ lấy file đầu tiên
-      
-      // Tạo URL tạm thời để hiển thị ảnh ngay lập tức
+      const file = acceptedFiles[0];
       const imageUrl = URL.createObjectURL(file);
       setUploadedImage(imageUrl);
-      
-      // TODO: Lưu file này vào state tổng (Zustand) để mang đi Combine AI
     }
   }, []);
 
-  // Cấu hình Dropzone: Chỉ nhận ảnh, tối đa 1 file
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': [] },
     maxFiles: 1,
   });
 
-  // Nút xóa ảnh để upload lại
   const handleRemoveImage = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Tránh kích hoạt Dropzone khi bấm nút xóa
+    e.stopPropagation();
     setUploadedImage(null);
+    setZoom(1);
+    setRotation(0);
   };
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-white rounded-lg border border-gray-100 shadow-sm p-4 overflow-hidden relative">
       
       {uploadedImage ? (
-        // ==========================================
-        // TRẠNG THÁI 2: ĐÃ CÓ ẢNH (Hiển thị ảnh)
-        // ==========================================
-        <div className="relative w-full h-full flex flex-col items-center justify-center group">
-          <div className="relative w-[80%] aspect-square rounded-full overflow-hidden border-4 border-gray-100 shadow-inner">
-            <img 
-              src={uploadedImage} 
-              alt="Customer Watch Face" 
-              className="w-full h-full object-cover"
+        <div className="relative w-full h-full flex flex-col">
+          {/* VÙNG CHỈNH SỬA ẢNH */}
+          <div className="relative flex-1 w-full bg-gray-900 rounded-lg overflow-hidden border border-gray-200">
+            <Cropper
+              image={uploadedImage}
+              crop={crop}
+              zoom={zoom}
+              rotation={rotation}
+              aspect={1}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onRotationChange={setRotation}
+              showGrid={false}
+              cropShape="round" // Tạo vùng cắt hình tròn
             />
+            
+            {/* VECTOR KHUNG ĐỒNG HỒ OVERLAY (Không cho phép tương tác để click xuyên qua ảnh) */}
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+              <svg 
+                viewBox="0 0 100 100" 
+                className="w-[85%] h-[85%] text-white/50"
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="0.5"
+              >
+                {/* Vòng ngoài vỏ đồng hồ */}
+                <circle cx="50" cy="50" r="48" strokeDasharray="2 1" />
+                {/* Vòng mặt số chuẩn */}
+                <circle cx="50" cy="50" r="40" className="text-yellow-500/80" strokeWidth="1" />
+                {/* Tâm điểm */}
+                <circle cx="50" cy="50" r="1" fill="currentColor" />
+                {/* Các vạch chỉ giờ */}
+                {[...Array(12)].map((_, i) => (
+                  <line 
+                    key={i}
+                    x1="50" y1="12" x2="50" y2="15" 
+                    transform={`rotate(${i * 30} 50 50)`} 
+                  />
+                ))}
+              </svg>
+            </div>
+            
+            <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/70 bg-black/50 px-2 py-1 rounded-full z-20 pointer-events-none">
+              Drag to move • Scroll to zoom
+            </p>
           </div>
-          <button 
-            onClick={handleRemoveImage}
-            className="absolute top-2 right-2 bg-white/90 backdrop-blur text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-1.5 rounded-md text-xs font-medium shadow-sm transition-colors border border-gray-200"
-          >
-            Change Image
-          </button>
-          <p className="mt-4 text-xs text-gray-500 font-medium">Watch Face Ready</p>
-        </div>
 
+          {/* BỘ ĐIỀU KHIỂN (CONTROLS) */}
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-gray-400 uppercase w-10">Zoom</span>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-gray-400 uppercase w-10">Rotate</span>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                step={1}
+                value={rotation}
+                onChange={(e) => setRotation(Number(e.target.value))}
+                className="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mt-3">
+            <button 
+              onClick={handleRemoveImage}
+              className="text-red-500 hover:text-red-600 text-[11px] font-semibold"
+            >
+              Remove
+            </button>
+            <span className="text-[11px] text-gray-400">Align face to center</span>
+          </div>
+        </div>
       ) : (
-        // ==========================================
-        // TRẠNG THÁI 1: CHƯA CÓ ẢNH (Khu vực Upload & QR)
-        // ==========================================
+        /* PHẦN UPLOAD (GIỮ NGUYÊN NHƯ CŨ) */
         <div className="w-full h-full flex flex-col items-center justify-center gap-6">
-          
-          {/* Khu vực Kéo thả ảnh (Desktop) */}
           <div 
             {...getRootProps()} 
             className={`w-full flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${
@@ -119,14 +166,12 @@ export default function FaceUploader() {
             <p className="text-[10px] text-gray-400 mt-1">Supports JPG, PNG (Max 5MB)</p>
           </div>
 
-          {/* Dải phân cách */}
           <div className="w-full flex items-center gap-3 opacity-60">
             <div className="flex-1 h-px bg-gray-300"></div>
             <span className="text-[10px] uppercase tracking-widest font-semibold text-gray-500">Or use phone</span>
             <div className="flex-1 h-px bg-gray-300"></div>
           </div>
 
-          {/* Khu vực quét mã QR */}
           <div className="w-full flex items-center justify-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
             <div className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
               {uploadLink && (
@@ -144,7 +189,6 @@ export default function FaceUploader() {
               <p className="text-[10px] text-gray-500 mt-1 leading-snug">Point your phone camera here<br/>to capture your watch directly.</p>
             </div>
           </div>
-
         </div>
       )}
     </div>

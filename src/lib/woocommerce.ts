@@ -11,7 +11,7 @@ export type Product = {
   price: string;
   link: string;
   image: string;
-  thumbnail?: string;
+  thumbnail: string;
   attributes: Attribute[];
   categories: Category[];
   tags: Tag[];

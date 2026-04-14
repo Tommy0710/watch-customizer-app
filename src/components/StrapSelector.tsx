@@ -16,20 +16,44 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
   // State quản lý sản phẩm đang xem chi tiết
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // 2. Trích xuất TỰ ĐỘNG Danh mục và Thuộc tính từ kho sản phẩm
-  const { categories, attributes } = useMemo(() => {
-    if (!initialProducts) return { categories: [], attributes: [] };
-    
+  // 2. Trích xuất TỰ ĐỘNG Danh mục (Sắp xếp Alphabet)
+  const categories = useMemo(() => {
+    if (!initialProducts) return [];
     const catSet = new Set<string>();
-    const attrMap = new Map<string, Set<string>>();
 
     initialProducts.forEach(product => {
       // Lấy danh mục (Chỉ thêm vào bộ lọc nếu category đó nằm trong danh sách ALLOWED_CATEGORIES)
       product.categories?.forEach(c => {
         if (ALLOWED_CATEGORIES.includes(c.name)) catSet.add(c.name);
       });
-      
-      // Lấy tất cả thuộc tính (Màu sắc, Loại da, Size...)
+    });
+    
+    return Array.from(catSet).sort((a, b) => a.localeCompare(b));
+  }, [initialProducts]);
+
+  // 3. Trích xuất TỰ ĐỘNG Thuộc tính (Sắp xếp Alphabet & Ẩn tùy chọn trống)
+  const attributes = useMemo(() => {
+    if (!initialProducts) return [];
+
+    // Lọc trước các sản phẩm thoả mãn Search và Category hiện tại
+    const baseProducts = initialProducts.filter(product => {
+      const isAllowedProduct = product.categories?.some(c => ALLOWED_CATEGORIES.includes(c.name));
+      if (!isAllowedProduct) return false;
+
+      if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+
+      if (selectedCategory !== 'All') {
+        const hasCategory = product.categories?.some(c => c.name === selectedCategory);
+        if (!hasCategory) return false;
+      }
+
+      return true;
+    });
+
+    const attrMap = new Map<string, Set<string>>();
+
+    baseProducts.forEach(product => {
+      // Chỉ lấy thuộc tính từ những sản phẩm thực sự còn hiển thị trong Category này
       product.attributes?.forEach(attr => {
         // Chỉ thêm vào bộ lọc nếu thuộc tính đó nằm trong danh sách ALLOWED_ATTRIBUTES
         if (ALLOWED_ATTRIBUTES.includes(attr.name)) {
@@ -39,15 +63,15 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
       });
     });
 
-    const attrsArray = Array.from(attrMap.entries()).map(([name, options]) => ({
-      name,
-      options: Array.from(options)
-    }));
+    return Array.from(attrMap.entries())
+      .map(([name, options]) => ({
+        name,
+        options: Array.from(options).sort((a, b) => a.localeCompare(b)) // Sắp xếp các lựa chọn (options) theo alphabet
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)); // Sắp xếp tên thuộc tính (Material, Size...) theo alphabet
+  }, [initialProducts, searchTerm, selectedCategory]);
 
-    return { categories: Array.from(catSet), attributes: attrsArray };
-  }, [initialProducts]);
-
-  // 3. Logic Lọc Sản Phẩm (Áp dụng đồng thời Tìm kiếm + Danh mục + Thuộc tính)
+  // 4. Logic Lọc Sản Phẩm Cuối Cùng (Áp dụng đồng thời Tìm kiếm + Danh mục + Thuộc tính)
   const filteredProducts = useMemo(() => {
     if (!initialProducts) return [];
     
@@ -115,7 +139,11 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
           {/* Lọc Category */}
           <select 
             value={selectedCategory} 
-            onChange={(e) => { setSelectedCategory(e.target.value); handleFilterChange(); }}
+            onChange={(e) => { 
+              setSelectedCategory(e.target.value); 
+              setSelectedAttributes({}); // Xóa các thuộc tính đã chọn khi đổi danh mục để không bị kẹt filter
+              handleFilterChange(); 
+            }}
             className="bg-white border border-gray-200 text-[11px] rounded-md px-2 py-1.5 outline-none focus:border-black cursor-pointer text-gray-600 min-w-[110px]"
           >
             <option value="All">All Categories</option>
