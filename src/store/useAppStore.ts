@@ -3,7 +3,7 @@ import { Product } from '@/lib/woocommerce';
 
 interface AppState {
   selectedStrap: Product | null;
-  uploadedFace: string | null; // Lưu dạng Base64 hoặc Blob URL
+  uploadedFace: string | null;
   setSelectedStrap: (strap: Product | null) => void;
   setUploadedFace: (image: string | null) => void;
 }

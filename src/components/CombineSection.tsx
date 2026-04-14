@@ -40,7 +40,7 @@ export default function CombineSection() {
   return (
     <>
       {/* CỘT PHẢI - Kết quả AI */}
-      <div className="p-6 flex flex-col bg-[#FAFAFA] overflow-hidden h-full">
+      <div className="p-4 flex flex-col bg-[#FAFAFA] overflow-hidden h-full">
         <h2 className="text-sm tracking-widest text-gray-400 uppercase font-semibold mb-4 text-center flex-shrink-0">
           3. AI Generated Result
         </h2>
