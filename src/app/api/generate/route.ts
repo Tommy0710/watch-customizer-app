@@ -8,6 +8,11 @@ const replicate = new Replicate({
 export async function POST(request: Request) {
   try {
     const { strapImage, faceImage } = await request.json();
+    // Log để kiểm tra trên Terminal của VS Code
+    console.log("--- API RECEIVE DATA ---");
+    console.log("Strap Image:", strapImage ? "OK" : "MISSING");
+    console.log("Face Image Length:", faceImage ? faceImage.length : 0);
+    console.log("------------------------");
 
     if (!strapImage || !faceImage) {
       return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh' }, { status: 400 });

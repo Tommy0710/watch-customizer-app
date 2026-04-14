@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import type { Product } from '@/lib/woocommerce';
+import { useAppStore } from '@/store/useAppStore';
 
-const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Apple Watch Series Band', 'Apple Watch Ultra Band', 'Vintage Watch Straps'];
+const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
 // Thêm danh sách các thuộc tính được phép hiển thị trên bộ lọc (Thay đổi theo tên thuộc tính thực tế trên WooCommerce của bạn)
 const ALLOWED_ATTRIBUTES = ['Color', 'Size', 'Material'];
 
@@ -12,6 +13,8 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
+  const { setSelectedStrap } = useAppStore();
+
 
   // State quản lý sản phẩm đang xem chi tiết
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -113,6 +116,10 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
   if (!initialProducts || initialProducts.length === 0) {
     return <div className="text-sm text-red-500">Không có dữ liệu sản phẩm.</div>;
   }
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setSelectedStrap(product); // Bước này cực kỳ quan trọng để lưu vào bộ nhớ dùng chung
+};
 
   return (
     <div className="flex flex-col h-full">
@@ -180,7 +187,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => handleProductClick(product)}
                   className={`cursor-pointer group flex flex-col p-1 rounded-md transition-all ${selectedProduct.id === product.id ? 'ring-1 ring-black bg-gray-50' : 'hover:bg-gray-50'
                     }`}
                 >
@@ -256,7 +263,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                onClick={() => setSelectedProduct(product)}
+                onClick={() => handleProductClick(product)}
                 className="cursor-pointer group flex flex-col"
               >
                 <div className="bg-gray-100 aspect-square rounded-md overflow-hidden mb-1.5 relative border border-gray-200">

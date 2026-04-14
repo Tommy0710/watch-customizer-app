@@ -9,6 +9,11 @@ export default function CombineSection() {
   const [resultImage, setResultImage] = useState<string | null>(null);
 
   const handleCombine = async () => {
+    // Kiểm tra dữ liệu trong Store trước khi gửi
+    console.log("--- DEBUG COMBINE ---");
+    console.log("Strap Image URL:", selectedStrap?.image);
+    console.log("Face Image (Base64):", uploadedFace ? "Đã có dữ liệu" : "Trống");
+
     if (!selectedStrap) return alert("Vui lòng chọn 1 mẫu dây đồng hồ ở Bước 1!");
     if (!uploadedFace) return alert("Vui lòng tải lên mặt đồng hồ ở Bước 2!");
 

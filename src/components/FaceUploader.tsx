@@ -119,38 +119,20 @@ export default function FaceUploader() {
                 // TRẠNG THÁI 2: ĐANG CHỈNH SỬA (EDIT MODE)
                 // ==========================================
                 <div className="relative w-full h-full flex flex-col">
-                    <div className="relative flex-1 w-full bg-gray-900 rounded-lg overflow-hidden border border-gray-200">
+                    <div className="relative flex-1 w-full bg-gray-900 rounded-lg overflow-hidden border border-gray-200 h-[85%] aspect-square">
                         <Cropper
                             image={uploadedImage}
                             crop={crop}
                             zoom={zoom}
                             rotation={rotation}
                             aspect={1}
+                            cropShape="round"
+                            showGrid={false}
                             onCropChange={setCrop}
                             onZoomChange={setZoom}
                             onRotationChange={setRotation}
-                            onCropComplete={(croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)} // HỨNG TỌA ĐỘ
-                            showGrid={false}
-                            cropShape="round"
-                            style={{
-                                cropAreaStyle: {
-                                    boxShadow: 'none',
-                                    border: 'none',
-                                }
-                            }}
+                            onCropComplete={(area, areaPixels) => setCroppedAreaPixels(areaPixels)}
                         />
-
-                        {/* VECTOR OVERLAY */}
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-                            <svg viewBox="0 0 100 100" className="w-[85%] h-[85%] text-white/60 drop-shadow-md" fill="none" stroke="currentColor" strokeWidth="0.5">
-                                <circle cx="50" cy="50" r="48" strokeDasharray="2 1" />
-                                <circle cx="50" cy="50" r="40" className="text-yellow-400/80" strokeWidth="0.8" />
-                                <circle cx="50" cy="50" r="1" fill="currentColor" />
-                                {[...Array(12)].map((_, i) => (
-                                    <line key={i} x1="50" y1="12" x2="50" y2="15" transform={`rotate(${i * 30} 50 50)`} />
-                                ))}
-                            </svg>
-                        </div>
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2">
