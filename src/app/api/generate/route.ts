@@ -7,42 +7,54 @@ const replicate = new Replicate({
 
 export async function POST(request: Request) {
   try {
-    const { strapImage, faceImage } = await request.json();
-    // Log để kiểm tra trên Terminal của VS Code
+    // Chúng ta sẽ nhận bức ảnh đã ghép thô từ Frontend (để giữ đúng vị trí, tỉ lệ)
+    const { compositeImage } = await request.json();
+
     console.log("--- API RECEIVE DATA ---");
-    console.log("Strap Image:", strapImage ? "OK" : "MISSING");
-    console.log("Face Image Length:", faceImage ? faceImage.length : 0);
+    console.log("Composite Image Length:", compositeImage ? compositeImage.length : 0);
     console.log("------------------------");
 
-    if (!strapImage || !faceImage) {
-      return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh' }, { status: 400 });
+    if (!compositeImage) {
+      return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh Composite' }, { status: 400 });
     }
 
-    console.log("🚀 Đang gửi yêu cầu cho Replicate AI...");
+    console.log("🚀 Đang gửi yêu cầu cho Replicate AI (Model: FLUX-2-PRO)...");
 
-    // Tạm thời chúng ta sẽ sử dụng model SDXL Image-to-Image để AI tự blend 2 bức ảnh
-    // LƯU Ý: Vì bạn KHÔNG tách nền và KHÔNG pre-composite, AI sẽ phải tự "tưởng tượng" rất nhiều.
-    const output = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+    // Gọi FLUX-2-PRO theo đúng Schema
+    const output: any = await replicate.run(
+      "black-forest-labs/flux-2-pro",
       {
         input: {
-          prompt: "A photorealistic high-end watch face seamlessly attached to a luxury leather watch strap. Professional studio lighting, top-down view, highly detailed.",
-          negative_prompt: "ugly, deformed, bad anatomy, poorly drawn, extra limbs, artifacts",
-          image: faceImage, // Cung cấp ảnh mặt đồng hồ làm ảnh gốc
-          prompt_strength: 0.65, // Mức độ AI được phép "sáng tạo" đè lên ảnh gốc (0.0 đến 1.0)
-          refine: "expert_ensemble_refiner",
-          apply_watermark: false
+          prompt: "A photorealistic luxury watch composed from two reference images: the original watch face and the original leather strap. Strictly preserve the exact design, texture, color, and proportions of both the watch face and the strap without alteration or redesign. The watch face is seamlessly and naturally attached to the strap, with accurate alignment, realistic connection, and proper scale. Top-down flat lay composition, perfectly centered. The FULL leather strap must be completely visible in the frame from end to end, no cropping, no zoom-in. High-end product photography, professional studio lighting, soft shadows, clean background. Ultra-detailed, sharp focus, realistic materials, luxury aesthetic, 8k quality.",
+          
+          // SỬA ĐỔI QUAN TRỌNG NHẤT: Đưa ảnh vào mảng (Array)
+          input_images: [compositeImage], 
+          
+          aspect_ratio: "9:16",
+          
+          // Các thông số tinh chỉnh thêm dựa trên schema:
+          output_format: "jpg", // Xuất JPG cho nhẹ và dễ load
+          output_quality: 90,   // Chất lượng 90/100
+          safety_tolerance: 5,  // Nới lỏng kiểm duyệt (5 là cao nhất) để AI không hiểu nhầm vân da cá sấu/đà điểu là ảnh bạo lực/động vật
+          resolution: "1 MP"    // Giữ nguyên độ phân giải chuẩn
         }
       }
-    )as string[];
+    );
 
-    console.log("✅ AI đã xử lý xong:", output);
+    console.log("✅ AI đã xử lý xong. Dữ liệu gốc trả về:", output);
 
-    // Replicate trả về mảng URL, ta lấy URL đầu tiên
-    return NextResponse.json({ success: true, resultImage: output[0] });
+    if (!output) {
+      throw new Error("AI không trả về kết quả hợp lệ.");
+    }
+
+    // LƯU Ý TỪ DOC: Flux trả về 1 object đơn, KHÔNG PHẢI MẢNG!
+    // Do đó ta gọi thẳng output.url() thay vì output[0].url()
+    const imageUrl = typeof output === 'string' ? output : output.url();
+
+    return NextResponse.json({ success: true, resultImage: imageUrl });
 
   } catch (error: any) {
     console.error("❌ Lỗi AI:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

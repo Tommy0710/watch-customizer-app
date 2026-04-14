@@ -3,13 +3,60 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 
+// Hàm ghép 2 ảnh thành 1 bằng HTML5 Canvas ngay trên trình duyệt
+const mergeImagesWithCanvas = async (strapUrl: string, faceBase64: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return reject("Không hỗ trợ Canvas");
+
+    const strapImg = new Image();
+    const faceImg = new Image();
+
+    // Cần crossOrigin để lấy ảnh từ link bên ngoài (WooCommerce) mà không bị chặn CORS
+    strapImg.crossOrigin = "anonymous"; 
+
+    // Khi ảnh dây tải xong
+    strapImg.onload = () => {
+      canvas.width = strapImg.width;
+      canvas.height = strapImg.height;
+
+      // 1. Vẽ dây đồng hồ làm nền
+      ctx.drawImage(strapImg, 0, 0, canvas.width, canvas.height);
+
+      // Khi ảnh mặt đồng hồ tải xong
+      faceImg.onload = () => {
+        // 2. Tính toán cho mặt đồng hồ chiếm 40% chiều rộng của tấm ảnh dây
+        const faceTargetWidth = canvas.width * 0.4; 
+        const faceTargetHeight = (faceImg.height / faceImg.width) * faceTargetWidth;
+        
+        const x = (canvas.width - faceTargetWidth) / 2;
+        const y = (canvas.height - faceTargetHeight) / 2;
+
+        // 3. Vẽ mặt đồng hồ đè lên giữa sợi dây
+        ctx.drawImage(faceImg, x, y, faceTargetWidth, faceTargetHeight);
+
+        // 4. Xuất ảnh định dạng JPEG với nén 80% để gửi API siêu nhanh và không bị lỗi 413
+        const compositeBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(compositeBase64);
+      };
+      
+      faceImg.src = faceBase64;
+    };
+
+    strapImg.onerror = () => reject("Lỗi khi tải ảnh dây đồng hồ");
+    faceImg.onerror = () => reject("Lỗi khi tải ảnh mặt đồng hồ");
+    
+    strapImg.src = strapUrl;
+  });
+};
+
 export default function CombineSection() {
   const { selectedStrap, uploadedFace } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
   const handleCombine = async () => {
-    // Kiểm tra dữ liệu trong Store trước khi gửi
     console.log("--- DEBUG COMBINE ---");
     console.log("Strap Image URL:", selectedStrap?.image);
     console.log("Face Image (Base64):", uploadedFace ? "Đã có dữ liệu" : "Trống");
@@ -19,15 +66,28 @@ export default function CombineSection() {
 
     setIsGenerating(true);
     try {
+      // 1. Chạy hàm ghép thô 2 ảnh lại thành 1
+      const compositeBase64 = await mergeImagesWithCanvas(selectedStrap.image, uploadedFace);
+      
+      // 2. Gửi bức ảnh đã ghép cho AI
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          strapImage: selectedStrap.image, // URL ảnh gốc dây đồng hồ
-          faceImage: uploadedFace,         // Base64 hoặc URL của ảnh khách chụp
+          compositeImage: compositeBase64 
         }),
       });
 
+      // 3. Bắt lỗi cứng từ máy chủ (Tránh lỗi SyntaxError JSON)
+      if (!response.ok) {
+        const errorText = await response.text(); 
+        console.error("Lỗi Server:", errorText);
+        alert(`Server báo lỗi (${response.status}). Vui lòng thử lại!`);
+        setIsGenerating(false);
+        return;
+      }
+
+      // 4. Xử lý kết quả trả về
       const data = await response.json();
       if (data.success) {
         setResultImage(data.resultImage);
@@ -57,9 +117,9 @@ export default function CombineSection() {
               <p className="text-xs text-black font-semibold uppercase tracking-widest">AI đang thiết kế...</p>
             </div>
           ) : resultImage ? (
-             <img src={resultImage} alt="Kết quả AI" className="w-full h-full object-contain" />
+             <img src={resultImage} alt="Kết quả AI" className="w-full h-full object-contain shadow-lg" />
           ) : (
-            <p className="text-center">Kết quả kết hợp bằng AI sẽ hiển thị tại đây sau khi bạn nhấn Combine.</p>
+            <p className="text-center text-sm px-4">Kết quả kết hợp bằng AI sẽ hiển thị tại đây sau khi bạn nhấn Combine.</p>
           )}
 
         </div>
