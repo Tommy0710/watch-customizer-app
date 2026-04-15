@@ -26,10 +26,16 @@ export default function FaceUploader() {
 
     // 1. Kiểm tra ảnh từ điện thoại gửi lên (Polling)
     useEffect(() => {
+        // CHỐT CHẶN SỐ 1: Nếu đã có ảnh (do kéo thả PC hoặc đã quét QR xong) thì DỪNG ngay lập tức.
+        if (uploadedImage) return;
+
         const newSessionId = crypto.randomUUID();
         setSessionId(newSessionId);
         const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
         setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
+
+        // Khai báo biến interval ra ngoài để hàm bên trong có thể gọi lệnh hủy
+        let intervalId: NodeJS.Timeout;
 
         const checkUpload = async () => {
             try {
@@ -39,15 +45,22 @@ export default function FaceUploader() {
                 if (data.success && data.image) {
                     setUploadedImage(data.image);
                     setIsEditing(true);
+
+                    // CHỐT CHẶN SỐ 2: Tắt ngay vòng lặp API khi đã nhận được ảnh thành công
+                    if (intervalId) clearInterval(intervalId);
                 }
             } catch (err) {
                 console.error("Lỗi khi kiểm tra ảnh:", err);
             }
         };
 
-        let intervalId = setInterval(checkUpload, 2500);
+        // Chạy vòng lặp mỗi 2.5 giây
+        intervalId = setInterval(checkUpload, 2500);
+
+        // CHỐT CHẶN SỐ 3: Dọn dẹp sạch sẽ nếu người dùng tắt popup hoặc chuyển trang
         return () => clearInterval(intervalId);
-    }, [setUploadedFace]);
+
+    }, [uploadedImage]); // <-- QUAN TRỌNG: Báo cho React biết hãy chạy lại logic tắt API nếu 'uploadedImage' thay đổi
 
     // 2. Xử lý Kéo Thả / Upload trực tiếp bằng FileReader (Base64)
     const onDrop = useCallback((acceptedFiles: File[]) => {

@@ -1,60 +1,80 @@
+export const maxDuration = 60; // Tránh Vercel báo lỗi Timeout
+
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
+import sharp from 'sharp';
 
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
+    auth: process.env.REPLICATE_API_TOKEN,
 });
 
 export async function POST(request: Request) {
-  try {
-    // Chúng ta sẽ nhận bức ảnh đã ghép thô từ Frontend (để giữ đúng vị trí, tỉ lệ)
-    const { strapImage, faceImage } = await request.json();
+    try {
+        const { strapImage, faceImage } = await request.json();
 
-    console.log("--- API RECEIVE DATA ---");
-    console.log("Strap Image:", strapImage ? "OK" : "MISSING");
-    console.log("Face Image Length:", faceImage ? faceImage.length : 0);
-    console.log("------------------------");
-
-    if (!strapImage || !faceImage) {
-      return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh' }, { status: 400 });
-    }
-
-    console.log("🚀 Đang gửi MẢNG 2 ẢNH cho FLUX-2-PRO...");
-
-    // Gọi FLUX-2-PRO theo đúng Schema
-    const output: any = await replicate.run(
-      "black-forest-labs/flux-2-pro",
-      {
-        input: {
-          prompt: "A photorealistic a watch composed from two reference images: the original watch face and the original flat leather watch strap, strictly preserving the exact design, color, grain pattern, stitching, and material texture of the leather strap with absolute accuracy (no color shift, no texture alteration, no redesign), strictly preserving the exact design, texture, color, and proportions of the watch face without any modification, seamlessly and naturally attaching the watch face to the strap with precise alignment, realistic lugs connection, correct physical scale, maintaining real-world proportions between the watch case and strap with a realistic case-to-strap width ratio (strap width approximately 18–22mm depending on case size) ensuring the strap is not disproportionately thin or thick relative to the watch face, top-down flat lay composition perfectly centered, the FULL leather strap completely visible from end to end including both strap tips with no cropping and no zoom-in, high-end product photography with professional studio lighting, soft shadows, clean minimal background, ultra-detailed sharp focus with realistic materials and accurate reflections, luxury aesthetic in 8k quality, maintaining true-to-source color fidelity and micro-texture detail consistency across the entire strap.",     
-          // SỬA ĐỔI QUAN TRỌNG NHẤT: Đưa ảnh vào mảng (Array)
-          input_images: [strapImage, faceImage], 
-          
-          aspect_ratio: "9:16",
-          seed: 19826,
-          // Các thông số tinh chỉnh thêm dựa trên schema:
-          output_format: "jpg", // Xuất JPG cho nhẹ và dễ load
-          output_quality: 90,   // Chất lượng 90/100
-          safety_tolerance: 5,  // Nới lỏng kiểm duyệt (5 là cao nhất) để AI không hiểu nhầm vân da cá sấu/đà điểu là ảnh bạo lực/động vật
-          resolution: "1 MP"    // Giữ nguyên độ phân giải chuẩn
+        if (!strapImage || !faceImage) {
+            return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh' }, { status: 400 });
         }
-      }
-    );
 
-    console.log("✅ AI đã xử lý xong. Dữ liệu gốc trả về:", output);
+        console.log("🛠️ Đang xử lý tỉ lệ chuẩn (Mặt đồng hồ = 45% Dây) bằng Sharp...");
 
-    if (!output) {
-      throw new Error("AI không trả về kết quả hợp lệ.");
+        // 1. Tải ảnh Dây đồng hồ từ URL về Server
+        const strapRes = await fetch(strapImage);
+        if (!strapRes.ok) throw new Error("Không thể tải ảnh dây đồng hồ");
+        const strapBuffer = Buffer.from(await strapRes.arrayBuffer());
+
+        // 2. Đọc ảnh Mặt đồng hồ từ Base64
+        const base64Data = faceImage.replace(/^data:image\/\w+;base64,/, "");
+        const faceBuffer = Buffer.from(base64Data, 'base64');
+
+        // 3. ĐO ĐẠC VÀ THU NHỎ (Bước quyết định tỉ lệ)
+        const strapImg = sharp(strapBuffer);
+        const metadata = await strapImg.metadata();
+        const strapWidth = metadata.width || 1000;
+
+        // Tỉ lệ vàng: Mặt đồng hồ thường chiếm khoảng 42% - 45% chiều rộng của tấm ảnh dây
+        const targetFaceWidth = Math.round(strapWidth * 0.45);
+
+        const resizedFace = await sharp(faceBuffer)
+            .resize({ width: targetFaceWidth }) // Ép thu nhỏ mặt đồng hồ
+            .toBuffer();
+
+        // 4. Ghép mặt đồng hồ đã thu nhỏ vào chính giữa dây
+        const compositeBuffer = await strapImg
+            .composite([{ input: resizedFace, gravity: 'center' }])
+            .jpeg({ quality: 85 })
+            .toBuffer();
+
+        const compositeBase64 = `data:image/jpeg;base64,${compositeBuffer.toString('base64')}`;
+
+        console.log("🚀 Đã ghép xong tỉ lệ chuẩn! Gửi 1 ảnh duy nhất cho FLUX-2-PRO...");
+
+        // 5. GỌI FLUX VỚI 1 ẢNH DUY NHẤT (Đã chuẩn tỉ lệ)
+        const output: any = await replicate.run(
+            "black-forest-labs/flux-2-pro",
+            {
+                input: {
+                    seed: 19826,
+                    prompt: "A photorealistic luxury watch composed from two reference images: the original watch face and the original leather watch strap. Strictly preserve the exact design, texture, color, and proportions of both the watch face and the strap without alteration or redesign. The watch face is seamlessly and naturally attached to the watch strap, with accurate alignment, realistic connection, and proper scale. The watch face must appear proportionally smaller relative to the full strap, matching real-world wristwatch proportions (approximately 1/3 to 1/4 of the total strap length). Top-down flat lay composition, perfectly centered. The FULL leather watch strap must be completely visible in the frame from end to end, no cropping, no zoom-in. Ensure realistic product scale — the strap should dominate the composition while the watch face remains appropriately sized, not oversized. High-end product photography, professional studio lighting, soft shadows, clean background. Ultra-detailed, sharp focus, realistic materials, luxury aesthetic, 8k quality.",
+                    resolution: "1 MP",
+                    aspect_ratio: "9:16",
+                    input_images: ["https://replicate.delivery/pbxt/OvZzpssixa1OlANYyRrKTLZHVxLcqRA2SyMKYPpLo5Z2uebD/Double-Padded-Tawny-Brown-Habana-46.jpg", "https://replicate.delivery/pbxt/OvZzrNczuIbIGkztujomAyNeokd2VU4jOmZovRej3y1T4i9O/d%20%283%29.png"],
+                    output_format: "webp",
+                    output_quality: 90,
+                    safety_tolerance: 5
+                }
+            }
+        );
+
+        console.log("✅ AI đã xử lý xong.");
+
+        if (!output) throw new Error("AI không trả về kết quả hợp lệ.");
+        const imageUrl = typeof output === 'string' ? output : output.url();
+
+        return NextResponse.json({ success: true, resultImage: imageUrl });
+
+    } catch (error: any) {
+        console.error("❌ Lỗi AI / Sharp:", error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-
-    // LƯU Ý TỪ DOC: Flux trả về 1 object đơn, KHÔNG PHẢI MẢNG!
-    // Do đó ta gọi thẳng output.url() thay vì output[0].url()
-    const imageUrl = typeof output === 'string' ? output : output.url();
-
-    return NextResponse.json({ success: true, resultImage: imageUrl });
-
-  } catch (error: any) {
-    console.error("❌ Lỗi AI:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
 }

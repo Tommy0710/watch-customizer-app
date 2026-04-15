@@ -24,38 +24,4 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-/* Custom vùng cắt cho mặt đồng hồ */
-.watch-face-cropper {
-  border: 2px solid rgba(255, 215, 0, 0.7) !important; /* Màu vàng sang trọng */
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5) !important; /* Làm tối vùng ngoài */
-}
 
-/* Thêm số 12 ở trên */
-.watch-face-cropper::before {
-  content: '12';
-  position: absolute;
-  top: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: white;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  font-family: serif;
-}
-
-/* Thêm số 6 ở dưới */
-.watch-face-cropper::after {
-  content: '6';
-  position: absolute;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: white;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  font-family: serif;
-}
