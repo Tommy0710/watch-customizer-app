@@ -16,33 +16,25 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Thiếu dữ liệu hình ảnh' }, { status: 400 });
         }
 
-        console.log("🛠️ Đang xử lý tỉ lệ chuẩn (Mặt đồng hồ = 45% Dây) bằng Sharp...");
-
-        // 1. Tải ảnh Dây đồng hồ từ URL về Server
-        const strapRes = await fetch(strapImage);
-        if (!strapRes.ok) throw new Error("Không thể tải ảnh dây đồng hồ");
-        const strapBuffer = Buffer.from(await strapRes.arrayBuffer());
-
-        // 2. Đọc ảnh Mặt đồng hồ từ Base64
+        // 1. Đọc ảnh Mặt đồng hồ từ Base64
         const base64Data = faceImage.replace(/^data:image\/\w+;base64,/, "");
         const faceBuffer = Buffer.from(base64Data, 'base64');
 
-        // 3. ĐO ĐẠC VÀ THU NHỎ (Bước quyết định tỉ lệ)
-        const strapImg = sharp(strapBuffer);
-        const metadata = await strapImg.metadata();
-        const strapWidth = metadata.width || 1000;
+        // 2. Lấy kích thước gốc của ảnh mặt đồng hồ, thu nhỏ xuống 1/2
+        const faceMeta = await sharp(faceBuffer).metadata();
+        const targetFaceWidth = Math.round((faceMeta.width ?? 1000) / 2);
 
-        // Tỉ lệ vàng: Mặt đồng hồ thường chiếm khoảng 42% - 45% chiều rộng của tấm ảnh dây
-        const targetFaceWidth = Math.round(strapWidth * 0.45);
+        console.log(`🛠️ Resize mặt đồng hồ: ${faceMeta.width}px → ${targetFaceWidth}px (1/2 kích thước gốc)`);
 
         const resizedFace = await sharp(faceBuffer)
-            .resize({ width: targetFaceWidth }) // Ép thu nhỏ mặt đồng hồ
+            .resize({ width: targetFaceWidth })
+            .jpeg({ quality: 90 })
             .toBuffer();
 
-        // 4. Chuyển ảnh thu nhỏ sang data URI để gửi cho Replicate
+        // 3. Chuyển ảnh thu nhỏ sang data URI để gửi cho Replicate
         const resizedFaceDataUri = `data:image/jpeg;base64,${resizedFace.toString('base64')}`;
 
-        console.log("🚀 Gửi 2 ảnh riêng (dây + mặt thu nhỏ) cho FLUX-2-PRO...");
+        console.log("🚀 Gửi 2 ảnh riêng (dây + mặt thu nhỏ 1/2) cho FLUX-2-PRO...");
 
         // 5. GỌI FLUX VỚI 2 ẢNH: dây đã chọn + mặt đồng hồ được thu nhỏ đúng tỉ lệ
         const output: any = await replicate.run(

@@ -292,7 +292,7 @@ function MobileUploadClient() {
       </div>
 
       {/* Bottom actions */}
-      <div className="px-6 pb-10 pt-6 flex flex-col items-center gap-3">
+      <div className="px-6 pb-5 flex flex-col items-center gap-3">
         {preview ? (
           <>
             <button
