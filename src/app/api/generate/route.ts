@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
         // 2. Lấy kích thước gốc của ảnh mặt đồng hồ, thu nhỏ xuống 1/2
         const faceMeta = await sharp(faceBuffer).metadata();
-        const targetFaceWidth = Math.round((faceMeta.width ?? 1000) / 2);
+        const targetFaceWidth = Math.round((faceMeta.width ?? 1000) / 2.5);
 
         console.log(`🛠️ Resize mặt đồng hồ: ${faceMeta.width}px → ${targetFaceWidth}px (1/2 kích thước gốc)`);
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
             {
                 input: {
                     seed: 19826,
-                    prompt: "A photorealistic luxury watch composed from two reference images: the original watch face and the original leather watch strap. Strictly preserve the exact design, texture, color, and proportions of both the watch face and the strap without alteration or redesign. The watch face is seamlessly and naturally attached to the watch strap, with accurate alignment, realistic connection, and proper scale. The watch face must appear proportionally smaller relative to the full strap, matching real-world wristwatch proportions (approximately 1/3 to 1/4 of the total strap length). Top-down flat lay composition, perfectly centered. The FULL leather watch strap must be completely visible in the frame from end to end, no cropping, no zoom-in. Ensure realistic product scale — the strap should dominate the composition while the watch face remains appropriately sized, not oversized. High-end product photography, professional studio lighting, soft shadows, clean background. Ultra-detailed, sharp focus, realistic materials, luxury aesthetic, 8k quality.",
+                    prompt: "A hyper-detailed, photorealistic top-down flat lay photograph of a luxury wristwatch, seamlessly integrated into its complete leather strap. The image must meticulously preserve the exact details, colors, textures, and designs of both reference images without any alteration. The leather strap, which is proportionally dominant in the composition (the watch face must appear naturally smaller, roughly 1/3 to 1/4 the length of the strap), must be entirely visible from end to end, with no cropping. Every single element of the strap—including every individual thread of the precise stitching, the specific contours of the padded areas, the buckle style, the keepers, the hole pattern, and the exact grain pattern of the leather—must be reproduced with extreme fidelity. The watch face is perfectly centered and naturally connected to the strap, with sharp, ultra-detailed definition of all dial elements, hands, markers, and textures. The full strap extends across the frame, showcasing its entire length and every detail. The background is a clean, neutral, soft-toned, professional studio surface. The lighting is diffused, high-end product photography lighting, creating soft, natural shadows that emphasize the texture and dimensionality of the leather grain, the raised stitching, and the facets of the watch face. Every element is in sharp, crystal-clear focus, providing an 8k ultra-high-resolution, luxury aesthetic.",
                     resolution: "1 MP",
                     aspect_ratio: "9:16",
                     input_images: [strapImage, resizedFaceDataUri],
