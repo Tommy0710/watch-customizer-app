@@ -39,17 +39,12 @@ export async function POST(request: Request) {
             .resize({ width: targetFaceWidth }) // Ép thu nhỏ mặt đồng hồ
             .toBuffer();
 
-        // 4. Ghép mặt đồng hồ đã thu nhỏ vào chính giữa dây
-        const compositeBuffer = await strapImg
-            .composite([{ input: resizedFace, gravity: 'center' }])
-            .jpeg({ quality: 85 })
-            .toBuffer();
+        // 4. Chuyển ảnh thu nhỏ sang data URI để gửi cho Replicate
+        const resizedFaceDataUri = `data:image/jpeg;base64,${resizedFace.toString('base64')}`;
 
-        const compositeBase64 = `data:image/jpeg;base64,${compositeBuffer.toString('base64')}`;
+        console.log("🚀 Gửi 2 ảnh riêng (dây + mặt thu nhỏ) cho FLUX-2-PRO...");
 
-        console.log("🚀 Đã ghép xong tỉ lệ chuẩn! Gửi 1 ảnh duy nhất cho FLUX-2-PRO...");
-
-        // 5. GỌI FLUX VỚI 1 ẢNH DUY NHẤT (Đã chuẩn tỉ lệ)
+        // 5. GỌI FLUX VỚI 2 ẢNH: dây đã chọn + mặt đồng hồ được thu nhỏ đúng tỉ lệ
         const output: any = await replicate.run(
             "black-forest-labs/flux-2-pro",
             {
@@ -58,7 +53,7 @@ export async function POST(request: Request) {
                     prompt: "A photorealistic luxury watch composed from two reference images: the original watch face and the original leather watch strap. Strictly preserve the exact design, texture, color, and proportions of both the watch face and the strap without alteration or redesign. The watch face is seamlessly and naturally attached to the watch strap, with accurate alignment, realistic connection, and proper scale. The watch face must appear proportionally smaller relative to the full strap, matching real-world wristwatch proportions (approximately 1/3 to 1/4 of the total strap length). Top-down flat lay composition, perfectly centered. The FULL leather watch strap must be completely visible in the frame from end to end, no cropping, no zoom-in. Ensure realistic product scale — the strap should dominate the composition while the watch face remains appropriately sized, not oversized. High-end product photography, professional studio lighting, soft shadows, clean background. Ultra-detailed, sharp focus, realistic materials, luxury aesthetic, 8k quality.",
                     resolution: "1 MP",
                     aspect_ratio: "9:16",
-                    input_images: ["https://replicate.delivery/pbxt/OvZzpssixa1OlANYyRrKTLZHVxLcqRA2SyMKYPpLo5Z2uebD/Double-Padded-Tawny-Brown-Habana-46.jpg", "https://replicate.delivery/pbxt/OvZzrNczuIbIGkztujomAyNeokd2VU4jOmZovRej3y1T4i9O/d%20%283%29.png"],
+                    input_images: [strapImage, resizedFaceDataUri],
                     output_format: "webp",
                     output_quality: 90,
                     safety_tolerance: 5
