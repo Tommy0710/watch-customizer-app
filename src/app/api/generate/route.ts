@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
         // 2. Lấy kích thước gốc của ảnh mặt đồng hồ, thu nhỏ xuống 1/2
         const faceMeta = await sharp(faceBuffer).metadata();
-        const targetFaceWidth = Math.round((faceMeta.width ?? 1000) / 2.5);
+        const targetFaceWidth = Math.round((faceMeta.width ?? 1000) / 2.7);
 
         console.log(`🛠️ Resize mặt đồng hồ: ${faceMeta.width}px → ${targetFaceWidth}px (1/2 kích thước gốc)`);
 
