@@ -2,6 +2,16 @@ import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/clien
 import sharp from 'sharp';
 import clientPromise from '@/lib/mongodb';
 
+// Fail fast with a clear message if a deployment (e.g. a Vercel environment) is missing one of
+// these — otherwise the AWS SDK throws its own cryptic "No value provided for input HTTP label:
+// Bucket." error deep inside a command call, which is easy to mistake for a CORS/permissions
+// issue (Vercel never reads .env.local, so these must be set in the project's own env settings).
+for (const name of ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET']) {
+  if (!process.env[name]) {
+    throw new Error(`Missing required AWS env var: ${name}`);
+  }
+}
+
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
