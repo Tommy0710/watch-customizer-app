@@ -1,12 +1,13 @@
 // src/app/page.tsx
 import { getDatabaseProducts } from '@/lib/woocommerce'; // <-- ĐÃ SỬA: Import hàm gọi Database
+import { getDatabaseFaces } from '@/lib/aws';
 import StrapSelector from '@/components/StrapSelector';
 import FaceUploader from '@/components/FaceUploader';
 import CombineSection from '@/components/CombineSection';
 
 export default async function CustomizerApp() {
   // 1. Lấy dữ liệu siêu tốc trực tiếp từ MongoDB Atlas
-  const products = await getDatabaseProducts(); // <-- ĐÃ SỬA: Gọi hàm Database
+  const [products, faces] = await Promise.all([getDatabaseProducts(), getDatabaseFaces()]);
 
   return (
     <main className="h-screen w-full font-sans text-gray-800 overflow-hidden">
@@ -33,7 +34,7 @@ export default async function CustomizerApp() {
               2. Upload Customer Watch Face
             </h2>
             <div className="flex-1 min-h-0 w-full">
-              <FaceUploader />
+              <FaceUploader initialFaces={faces} />
             </div>
           </div>
         </div>

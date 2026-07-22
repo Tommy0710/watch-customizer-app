@@ -25,3 +25,8 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(0.32); }
+  50% { transform: scaleY(1); }
+}
+
