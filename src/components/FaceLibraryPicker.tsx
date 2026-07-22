@@ -18,10 +18,16 @@ export default function FaceLibraryPicker({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [faces]);
 
+  // File names use hyphens as word separators (e.g. "grand-lange-1-moon-phase"), but a natural
+  // search query normally has spaces ("grand lange 1") — normalize both sides the same way so
+  // searching by model name/reference actually matches, not just literal substrings.
+  const normalize = (s: string) => s.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+
   const filteredFaces = useMemo(() => {
+    const normalizedSearch = normalize(searchTerm);
     return faces.filter((f) => {
       if (selectedCategory !== 'All' && f.category !== selectedCategory) return false;
-      if (searchTerm && !f.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (normalizedSearch && !normalize(f.name).includes(normalizedSearch)) return false;
       return true;
     });
   }, [faces, searchTerm, selectedCategory]);
@@ -95,3 +101,4 @@ export default function FaceLibraryPicker({
     </div>
   );
 }
+

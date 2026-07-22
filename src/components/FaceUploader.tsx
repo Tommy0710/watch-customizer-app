@@ -6,27 +6,29 @@ import { QRCodeSVG } from 'qrcode.react';
 import Cropper from 'react-easy-crop';
 import { useAppStore } from '@/store/useAppStore';
 import getCroppedImg from '@/utils/cropImage';
+import FaceLibraryPicker from '@/components/FaceLibraryPicker';
+import type { FaceItem } from '@/lib/aws';
 
-export default function FaceUploader() {
+export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[] }) {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string>('');
     const [uploadLink, setUploadLink] = useState<string>('');
 
-    // Lấy hàm cập nhật ảnh từ Zustand
+    // Grab the image-update setter from Zustand
     const { setUploadedFace } = useAppStore();
 
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
 
-    // State MỚI: Lưu tọa độ cắt và trạng thái đã cắt xong chưa
+    // Tracks the crop coordinates and whether cropping is complete
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
     const [isEditing, setIsEditing] = useState<boolean>(true);
     const [finalCroppedImage, setFinalCroppedImage] = useState<string | null>(null);
 
-    // 1. Kiểm tra ảnh từ điện thoại gửi lên (Polling)
+    // 1. Poll for the image sent up from the phone
     useEffect(() => {
-        // CHỐT CHẶN SỐ 1: Nếu đã có ảnh (do kéo thả PC hoặc đã quét QR xong) thì DỪNG ngay lập tức.
+        // GUARD 1: If we already have an image (PC drag-drop, or the QR scan already finished), stop immediately.
         if (uploadedImage) return;
 
         const newSessionId = crypto.randomUUID();
@@ -34,7 +36,7 @@ export default function FaceUploader() {
         const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
         setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
 
-        // Khai báo biến interval ra ngoài để hàm bên trong có thể gọi lệnh hủy
+        // Declared outside so the inner function can clear it
         let intervalId: NodeJS.Timeout;
 
         const checkUpload = async () => {
@@ -46,27 +48,27 @@ export default function FaceUploader() {
                     setUploadedImage(data.image);
                     setIsEditing(true);
 
-                    // CHỐT CHẶN SỐ 2: Tắt ngay vòng lặp API khi đã nhận được ảnh thành công
+                    // GUARD 2: Stop polling as soon as an image comes back successfully
                     if (intervalId) clearInterval(intervalId);
                 }
             } catch (err) {
-                console.error("Lỗi khi kiểm tra ảnh:", err);
+                console.error("Error checking for uploaded image:", err);
             }
         };
 
-        // Chạy vòng lặp mỗi 2.5 giây
+        // Poll every 2.5 seconds
         intervalId = setInterval(checkUpload, 2500);
 
-        // CHỐT CHẶN SỐ 3: Dọn dẹp sạch sẽ nếu người dùng tắt popup hoặc chuyển trang
+        // GUARD 3: Clean up if the user closes the popup or navigates away
         return () => clearInterval(intervalId);
 
-    }, [uploadedImage]); // <-- QUAN TRỌNG: Báo cho React biết hãy chạy lại logic tắt API nếu 'uploadedImage' thay đổi
+    }, [uploadedImage]); // <-- IMPORTANT: re-run this effect whenever 'uploadedImage' changes
 
-    // 2. Xử lý Kéo Thả / Upload trực tiếp bằng FileReader (Base64)
+    // 2. Handle drag-and-drop / direct upload via FileReader (base64)
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (acceptedFiles && acceptedFiles.length > 0) {
             const file = acceptedFiles[0];
-            if (file.size < 20 * 1024) return alert("Ảnh quá mờ hoặc dung lượng quá thấp!");
+            if (file.size < 20 * 1024) return alert("The image is too blurry or too low resolution!");
 
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -75,10 +77,10 @@ export default function FaceUploader() {
                 img.src = base64String;
                 img.onload = () => {
                     if (img.width < 400 || img.height < 400) {
-                        return alert(`Kích thước ảnh yêu cầu tối thiểu 400x400 pixel!`);
+                        return alert(`The image must be at least 400x400 pixels!`);
                     }
                     setUploadedImage(base64String);
-                    setIsEditing(true); // Bật chế độ chỉnh sửa
+                    setIsEditing(true); // Enter edit mode
                 };
             };
             reader.readAsDataURL(file);
@@ -90,30 +92,39 @@ export default function FaceUploader() {
         accept: { 'image/*': [] },
         maxFiles: 1,
     });
-    // 3. Hàm Xử lý khi khách bấm "Xác nhận & Cắt ảnh"
+    // 3. Handle the customer pressing "Confirm & Crop"
     const handleConfirmCrop = async () => {
         try {
             if (!uploadedImage || !croppedAreaPixels) return;
 
-            // Chạy hàm xử lý cắt ảnh bằng Canvas
+            // Run the Canvas-based crop
             const croppedImageBase64 = await getCroppedImg(
                 uploadedImage,
                 croppedAreaPixels,
                 rotation
             );
 
-            // Lưu ảnh đã cắt siêu đẹp vào State nội bộ và Store Zustand
+            // Save the cropped image to local state and the Zustand store
             setFinalCroppedImage(croppedImageBase64);
             setUploadedFace(croppedImageBase64);
-            setIsEditing(false); // Tắt chế độ Edit
+            setIsEditing(false); // Leave edit mode
 
         } catch (e) {
-            console.error("Lỗi khi cắt ảnh:", e);
-            alert("Đã có lỗi xảy ra khi xử lý hình ảnh.");
+            console.error("Error while cropping the image:", e);
+            alert("Something went wrong while processing the image.");
         }
     };
 
-    // 4. Hàm Reset
+    // 4. Handle picking an existing watch face from the AWS S3 library (skips the crop step)
+    const handleSelectLibraryFace = (face: FaceItem) => {
+        const proxyUrl = `/api/faces/image?key=${encodeURIComponent(face.key)}`;
+        setUploadedImage(proxyUrl);
+        setFinalCroppedImage(proxyUrl);
+        setUploadedFace(`s3://${face.key}`);
+        setIsEditing(false);
+    };
+
+    // 5. Reset
     const handleRemoveImage = (e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         setUploadedImage(null);
@@ -207,62 +218,68 @@ export default function FaceUploader() {
                         {/* Secondary */}
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="px-4 py-2 text-xs font-medium text-gray-600 
-            border border-gray-200 rounded-full 
+                            className="px-4 py-2 text-xs font-medium text-gray-600
+            border border-gray-200 rounded-full
             hover:bg-gray-100 transition-all">
-                            Chỉnh sửa
+                            Edit
                         </button>
 
                         {/* Primary */}
                         <button
                             onClick={() => handleRemoveImage()}
-                            className="px-4 py-2 text-xs font-medium text-white 
-            bg-black rounded-full 
+                            className="px-4 py-2 text-xs font-medium text-white
+            bg-black rounded-full
             hover:bg-gray-800 transition-all shadow-sm">
-                            Đổi ảnh
+                            Change Photo
                         </button>
                     </div>
                 </div>
 
             ) : (
-                /* PHẦN UPLOAD (GIỮ NGUYÊN NHƯ CŨ) */
-                <div className="w-full h-full flex flex-col items-center justify-center gap-6">
-                    <div
-                        {...getRootProps()}
-                        className={`w-full flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${isDragActive ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50/50'
-                            }`}
-                    >
-                        <input {...getInputProps()} />
-                        <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                            </svg>
-                        </div>
-                        <p className="text-sm font-medium text-gray-800">Drop your watch face here</p>
-                        <p className="text-[10px] text-gray-400 mt-1">Supports JPG, PNG (Max 5MB)</p>
+                /* PHẦN UPLOAD: cột trái = thư viện có sẵn, cột phải = upload/QR */
+                <div className="w-full h-full flex gap-4 min-h-0">
+                    <div className="flex-1 min-w-0 h-full">
+                        <FaceLibraryPicker faces={initialFaces} onSelect={handleSelectLibraryFace} />
                     </div>
 
-                    <div className="w-full flex items-center gap-3 opacity-60">
-                        <div className="flex-1 h-px bg-gray-300"></div>
-                        <span className="text-[10px] uppercase tracking-widest font-semibold text-gray-500">Or use phone</span>
-                        <div className="flex-1 h-px bg-gray-300"></div>
-                    </div>
-
-                    <div className="w-full flex items-center justify-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <div className="p-1.5 bg-white rounded-lg shadow-sm border w-[84px] h-[84px] border-gray-200">
-                            {uploadLink && (
-                                <QRCodeSVG
-                                    value={uploadLink}
-                                    size={70}
-                                    bgColor={"#ffffff"}
-                                    fgColor={"#000000"}
-                                    level={"L"}
-                                />
-                            )}
+                    <div className="flex-1 min-w-0 h-full flex flex-col items-center justify-center gap-6">
+                        <div
+                            {...getRootProps()}
+                            className={`w-full flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${isDragActive ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50/50'
+                                }`}
+                        >
+                            <input {...getInputProps()} />
+                            <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                            </div>
+                            <p className="text-sm font-medium text-gray-800">Drop your watch face here</p>
+                            <p className="text-[10px] text-gray-400 mt-1">Supports JPG, PNG (Max 5MB)</p>
                         </div>
-                        <div className="flex flex-col text-left">
-                            <p className="text-xs font-semibold text-gray-900 leading-tight">Scan to take a photo</p>
-                            <p className="text-[10px] text-gray-500 mt-1 leading-snug">Point your phone camera here<br />to capture your watch directly.</p>
+
+                        <div className="w-full flex items-center gap-3 opacity-60">
+                            <div className="flex-1 h-px bg-gray-300"></div>
+                            <span className="text-[10px] uppercase tracking-widest font-semibold text-gray-500">Or use phone</span>
+                            <div className="flex-1 h-px bg-gray-300"></div>
+                        </div>
+
+                        <div className="w-full flex items-center justify-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="p-1.5 bg-white rounded-lg shadow-sm border w-[84px] h-[84px] border-gray-200">
+                                {uploadLink && (
+                                    <QRCodeSVG
+                                        value={uploadLink}
+                                        size={70}
+                                        bgColor={"#ffffff"}
+                                        fgColor={"#000000"}
+                                        level={"L"}
+                                    />
+                                )}
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <p className="text-xs font-semibold text-gray-900 leading-tight">Scan to take a photo</p>
+                                <p className="text-[10px] text-gray-500 mt-1 leading-snug">Point your phone camera here<br />to capture your watch directly.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -3,50 +3,50 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 
-// Hàm ghép 2 ảnh thành 1 bằng HTML5 Canvas ngay trên trình duyệt
+// Merges the strap + face images into one via HTML5 Canvas, client-side
 const mergeImagesWithCanvas = async (strapUrl: string, faceBase64: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    if (!ctx) return reject("Không hỗ trợ Canvas");
+    if (!ctx) return reject("Canvas not supported");
 
     const strapImg = new Image();
     const faceImg = new Image();
 
-    // Cần crossOrigin để lấy ảnh từ link bên ngoài (WooCommerce) mà không bị chặn CORS
-    strapImg.crossOrigin = "anonymous"; 
+    // crossOrigin is required to read pixels from an external URL (WooCommerce) without CORS errors
+    strapImg.crossOrigin = "anonymous";
 
-    // Khi ảnh dây tải xong
+    // Once the strap image has loaded
     strapImg.onload = () => {
       canvas.width = strapImg.width;
       canvas.height = strapImg.height;
 
-      // 1. Vẽ dây đồng hồ làm nền
+      // 1. Draw the strap as the background
       ctx.drawImage(strapImg, 0, 0, canvas.width, canvas.height);
 
-      // Khi ảnh mặt đồng hồ tải xong
+      // Once the watch face image has loaded
       faceImg.onload = () => {
-        // 2. Tính toán cho mặt đồng hồ chiếm 40% chiều rộng của tấm ảnh dây
-        const faceTargetWidth = canvas.width * 0.4; 
+        // 2. Size the watch face to 40% of the strap image's width
+        const faceTargetWidth = canvas.width * 0.4;
         const faceTargetHeight = (faceImg.height / faceImg.width) * faceTargetWidth;
-        
+
         const x = (canvas.width - faceTargetWidth) / 2;
         const y = (canvas.height - faceTargetHeight) / 2;
 
-        // 3. Vẽ mặt đồng hồ đè lên giữa sợi dây
+        // 3. Draw the watch face centered on top of the strap
         ctx.drawImage(faceImg, x, y, faceTargetWidth, faceTargetHeight);
 
-        // 4. Xuất ảnh định dạng JPEG với nén 80% để gửi API siêu nhanh và không bị lỗi 413
+        // 4. Export as JPEG at 80% quality to keep the request fast and avoid 413 errors
         const compositeBase64 = canvas.toDataURL('image/jpeg', 0.8);
         resolve(compositeBase64);
       };
-      
+
       faceImg.src = faceBase64;
     };
 
-    strapImg.onerror = () => reject("Lỗi khi tải ảnh dây đồng hồ");
-    faceImg.onerror = () => reject("Lỗi khi tải ảnh mặt đồng hồ");
-    
+    strapImg.onerror = () => reject("Failed to load the strap image");
+    faceImg.onerror = () => reject("Failed to load the watch face image");
+
     strapImg.src = strapUrl;
   });
 };
@@ -59,45 +59,48 @@ export default function CombineSection() {
   const handleCombine = async () => {
     console.log("--- DEBUG COMBINE ---");
     console.log("Strap Image URL:", selectedStrap?.image);
-    console.log("Face Image (Base64):", uploadedFace ? "Đã có dữ liệu" : "Trống");
+    console.log("Face Image (Base64):", uploadedFace ? "Has data" : "Empty");
 
-    if (!selectedStrap) return alert("Vui lòng chọn 1 mẫu dây đồng hồ ở Bước 1!");
-    if (!uploadedFace) return alert("Vui lòng tải lên mặt đồng hồ ở Bước 2!");
+    if (!selectedStrap) return alert("Please select a watch strap in Step 1!");
+    if (!uploadedFace) return alert("Please upload a watch face in Step 2!");
 
     setIsGenerating(true);
     try {
-      // 1. Chạy hàm ghép thô 2 ảnh lại thành 1
+      // 1. Run the client-side rough merge of the two images into one
       //const compositeBase64 = await mergeImagesWithCanvas(selectedStrap.image, uploadedFace);
-      
-      // 2. Gửi bức ảnh đã ghép cho AI
+
+      // 2. Send the merged image to the server for processing
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          strapImage: selectedStrap.image, // URL (vd: https://cdn.handdn.com/...)
-          faceImage: uploadedFace          // Base64 (vd: data:image/jpeg;base64,...)
+          strapImage: selectedStrap.image, // URL (e.g. https://cdn.handdn.com/...)
+          faceImage: uploadedFace,         // Base64 (e.g. data:image/jpeg;base64,...)
+          strapName: selectedStrap.name,
+          strapCategories: (selectedStrap.categories || []).map((c) => c.name),
+          strapAttributes: selectedStrap.attributes || [],
         }),
       });
 
-      // 3. Bắt lỗi cứng từ máy chủ (Tránh lỗi SyntaxError JSON)
+      // 3. Hard-fail on a non-OK server response (avoids a JSON SyntaxError downstream)
       if (!response.ok) {
-        const errorText = await response.text(); 
-        console.error("Lỗi Server:", errorText);
-        alert(`Server báo lỗi (${response.status}). Vui lòng thử lại!`);
+        const errorText = await response.text();
+        console.error("Server error:", errorText);
+        alert(`Something went wrong (${response.status}). Please try again!`);
         setIsGenerating(false);
         return;
       }
 
-      // 4. Xử lý kết quả trả về
+      // 4. Handle the returned result
       const data = await response.json();
       if (data.success) {
         setResultImage(data.resultImage);
       } else {
-        alert("Lỗi AI: " + data.error);
+        alert("Something went wrong: " + data.error);
       }
     } catch (error) {
       console.error(error);
-      alert("Đã xảy ra lỗi khi kết nối tới AI.");
+      alert("Something went wrong. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -105,28 +108,38 @@ export default function CombineSection() {
 
   return (
     <>
-      {/* CỘT PHẢI - Kết quả AI */}
+      {/* RIGHT COLUMN - Result */}
       <div className="p-4 flex flex-col bg-[#FAFAFA] overflow-hidden h-full">
         <h2 className="text-sm tracking-widest text-gray-400 uppercase font-semibold mb-4 text-center flex-shrink-0">
-          3. AI Generated Result
+          3. Generated Result
         </h2>
         <div className="flex-1 w-full rounded-lg flex items-center justify-center text-gray-400 bg-white border border-gray-100 shadow-sm overflow-hidden p-4 relative">
-          
+
           {isGenerating ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-xs text-black font-semibold uppercase tracking-widest">AI đang thiết kế...</p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-full border border-black/15 bg-white shadow-sm flex items-center justify-center">
+                <div className="flex items-end gap-1 h-8">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-full rounded-full bg-black origin-bottom motion-safe:animate-[wave-bar_1s_ease-in-out_infinite]"
+                      style={{ animationDelay: `${i * 0.12}s` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-black font-semibold uppercase tracking-widest motion-safe:animate-pulse">Processing...</p>
             </div>
           ) : resultImage ? (
-             <img src={resultImage} alt="Kết quả AI" className="w-full h-full object-contain" />
+             <img src={resultImage} alt="Generated result" className="w-full h-full object-contain" />
           ) : (
-            <p className="text-center text-sm px-4">Kết quả kết hợp bằng AI sẽ hiển thị tại đây sau khi bạn nhấn Combine.</p>
+            <p className="text-center text-sm px-4">Your combined result will appear here after you press Combine.</p>
           )}
 
         </div>
       </div>
 
-      {/* NÚT COMBINE */}
+      {/* COMBINE BUTTON */}
       <button 
         onClick={handleCombine}
         disabled={isGenerating || !selectedStrap || !uploadedFace}
