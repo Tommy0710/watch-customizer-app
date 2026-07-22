@@ -45,6 +45,9 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
                 const data = await res.json();
 
                 if (data.success && data.image) {
+                    setCrop({ x: 0, y: 0 });
+                    setZoom(1);
+                    setRotation(0);
                     setUploadedImage(data.image);
                     setIsEditing(true);
 
@@ -79,6 +82,9 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
                     if (img.width < 400 || img.height < 400) {
                         return alert(`The image must be at least 400x400 pixels!`);
                     }
+                    setCrop({ x: 0, y: 0 });
+                    setZoom(1);
+                    setRotation(0);
                     setUploadedImage(base64String);
                     setIsEditing(true); // Enter edit mode
                 };
@@ -130,6 +136,7 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
         setUploadedImage(null);
         setFinalCroppedImage(null);
         setUploadedFace(null);
+        setCrop({ x: 0, y: 0 });
         setZoom(1);
         setRotation(0);
         setIsEditing(true);

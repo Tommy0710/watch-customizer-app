@@ -58,6 +58,23 @@ export default async function getCroppedImg(
   // Dán phần ảnh vừa trích xuất vào
   ctx.putImageData(data, 0, 0);
 
+  // UI hiển thị khung crop hình tròn (cropShape="round"), nhưng pixelCrop ở trên luôn là hình
+  // vuông bao quanh — 4 góc vuông ngoài vòng tròn hiển thị vẫn chứa pixel nền thật (không phải
+  // mặt đồng hồ) dù khách không nhìn thấy chúng trên UI. Che các góc đó bằng nền trắng sạch để
+  // ảnh thật sự gửi đi khớp với đúng những gì khách thấy trong khung tròn, giống định dạng nền
+  // trắng đã dùng nhất quán ở /api/generate cho ảnh mặt đồng hồ tham chiếu.
+  const radius = Math.min(canvas.width, canvas.height) / 2;
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = 'source-over';
+
   // Trả về bức ảnh đã cắt gọn gàng dưới dạng Base64 (PNG để giữ chất lượng cao nhất)
   return canvas.toDataURL('image/png');
 }
