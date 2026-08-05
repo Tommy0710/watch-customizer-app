@@ -35,6 +35,11 @@ export type StrapProfile = {
     // real product photos: single-padded has one raised center ridge, double-padded has two
     // parallel raised ridges side by side.
     doublePadded: boolean;
+    // Confirmed via MongoDB (4 real products in the "Sailcloth mix Alligator" category): these
+    // straps use two different materials on the same strap, not one uniform material like every
+    // other strap this classifier handles — a short alligator/croc leather cap right at each lug,
+    // then canvas/fabric for the rest of the length including the buckle and hole sections.
+    canvasAlligatorMix: boolean;
 };
 
 function findAttribute(attributes: Attribute[], attrName: string): string | undefined {
@@ -93,6 +98,12 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
     // Double vs single padded ridge — see StrapProfile['doublePadded'] doc comment.
     const doublePadded = padded && /double\s*padded/i.test(haystackName);
 
+    // Mixed-material construction — see StrapProfile['canvasAlligatorMix'] doc comment. Matches
+    // both "Canvas mix Alligator" and "Sailcloth Mix ... Alligator" name/category variants seen
+    // in the real catalog.
+    const canvasAlligatorMix = /(canvas|sailcloth)\s*mix\s*.*alligator/i.test(haystackCategories)
+        || /(canvas|sailcloth)\s*mix\s*.*alligator/i.test(haystackName);
+
     // Curved end
     const curvedEndAttr = findAttribute(attributes, 'Curved End');
     const curvedEnd = curvedEndAttr
@@ -143,6 +154,7 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
         thickness: classifyThickness(attributes),
         habanaBuckleSidePadding,
         doublePadded,
+        canvasAlligatorMix,
     };
 }
 
@@ -152,6 +164,12 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
 // only genuinely non-default, merchant-confirmed traits get an extra sentence.
 export function buildStrapProfileClause(profile: StrapProfile): string {
     const sentences: string[] = [];
+
+    if (profile.canvasAlligatorMix) {
+        sentences.push(
+            "This strap is a mixed-material construction, not a single uniform material: a short leather cap section with an alligator/croc scale pattern covers only the part nearest the spring bars and lugs at each end, and the remaining majority of the strap's length — including the tail toward the buckle and holes — is a woven canvas/fabric texture, not leather. Reproduce both materials exactly as shown in image 2, with a clean stitched transition seam where the alligator leather cap meets the canvas section near each lug — do not render the entire strap as one uniform material.",
+        );
+    }
 
     if (profile.style === 'vintage') {
         sentences.push(
