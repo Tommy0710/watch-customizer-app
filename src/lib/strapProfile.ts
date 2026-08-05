@@ -19,6 +19,22 @@ export type StrapProfile = {
     stitch: 'micro' | 'double' | 'box' | 'standard' | 'none';
     tipShape: 'square' | 'oval' | 'pilot' | 'regular';
     thickness: 'slim' | 'standard' | 'thick' | 'super-thick' | 'over-thick';
+    // Habana-leather padded straps are built differently from other padded straps: confirmed by
+    // zooming into real product photos, the raised padded ridge is a SHORT section concentrated
+    // near the buckle and the curved tip end — the leather near the spring bars/lugs stays flat,
+    // not puffy. (First attempt at this got the direction backwards and described the padding as
+    // running the strap's full length, which the user caught by pointing at a real generated image
+    // where the ridge wrongly extended all the way to the tip.) Deliberately not describing this to
+    // FLUX by naming the material "Habana" — that word carries a strong brown/tobacco color
+    // association that was separately observed overriding the actual reference photo's true color,
+    // e.g. a near-black teal-patina strap rendered as plain brown. Describe the construction only,
+    // never the material name.
+    habanaBuckleSidePadding: boolean;
+    // "Double Padded" vs "Single Padded" is only distinguished in the product NAME on this site,
+    // not by any WooCommerce attribute (`Padded` is "Square" for both) — confirmed by comparing
+    // real product photos: single-padded has one raised center ridge, double-padded has two
+    // parallel raised ridges side by side.
+    doublePadded: boolean;
 };
 
 function findAttribute(attributes: Attribute[], attrName: string): string | undefined {
@@ -69,6 +85,14 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
         ? paddedAttr.toLowerCase() !== 'flat'
         : /padded/i.test(haystackCategories) || /padded/i.test(haystackName);
 
+    // Habana material + padded is a distinct construction (see StrapProfile['habanaBuckleSidePadding']
+    // doc comment) — only meaningful combined with `padded`, computed after it above.
+    const materialAttr = findAttribute(attributes, 'Material');
+    const habanaBuckleSidePadding = padded && !!materialAttr && /habana/i.test(materialAttr);
+
+    // Double vs single padded ridge — see StrapProfile['doublePadded'] doc comment.
+    const doublePadded = padded && /double\s*padded/i.test(haystackName);
+
     // Curved end
     const curvedEndAttr = findAttribute(attributes, 'Curved End');
     const curvedEnd = curvedEndAttr
@@ -117,6 +141,8 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
         stitch,
         tipShape,
         thickness: classifyThickness(attributes),
+        habanaBuckleSidePadding,
+        doublePadded,
     };
 }
 
@@ -131,9 +157,19 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
         sentences.push(
             "This is a vintage-style strap: render its leather with a flat, smooth, understated surface — no raised or puffy padding, no glossy sheen, a worn-in matte vintage character.",
         );
-    } else if (profile.padded) {
+    } else if (profile.habanaBuckleSidePadding) {
+        const ridgeDescription = profile.doublePadded
+            ? 'two parallel raised padded ridges of equal width and height, running smoothly side by side as one continuous double band — not uneven, not offset, not broken into separate disconnected bumps'
+            : 'a single raised padded ridge with a wavy, rippled leather surface texture along it (not smooth or flat)';
         sentences.push(
-            'This strap has a padded construction: preserve its raised, slightly puffy edges along both sides rather than flattening them.',
+            `This strap's padded construction differs from typical padded straps: it has ${ridgeDescription}, but only as a short raised section concentrated near the buckle and the curved tip end — the leather near the spring bars and lugs stays flat and unpadded, not puffy. Preserve this short, localized ridge placement; do not extend the padding along the strap's full length.`,
+        );
+    } else if (profile.padded) {
+        const ridgeDescription = profile.doublePadded
+            ? 'two parallel raised padded ridges running side by side down its length'
+            : 'raised, slightly puffy edges along both sides';
+        sentences.push(
+            `This strap has a padded construction: preserve its ${ridgeDescription} rather than flattening them.`,
         );
     }
 

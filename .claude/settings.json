@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_mongodb_mongodb__find",
+      "Bash(curl -s \"https://cdn.handdn.com/wp-content/uploads/2024/10/29221223/Fern-Green-Habana-Double-Padded2.jpg\" -o /private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-strap-ref.jpg)",
+      "Bash(curl -s \"https://cdn.handdn.com/wp-content/uploads/2024/10/29221241/Single-Padded-Fern-Green-Habana013.jpg\" -o /private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-single-padded-ref.jpg)",
+      "Bash(NODE_PATH=./node_modules npx tsx -e ' *)",
+      "Bash(time curl -s -X POST http://localhost:3000/api/generate -H 'Content-Type: application/json' -d @/private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-test-body.json -o /private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-result.json)",
+      "Bash(curl -s \"https://replicate.delivery/xezq/qQ2eS0DASYxwESRMvHhqMKX8o17ww37Ea0ckobAyV0XQOYfWA/tmpkve8q3w3.webp\" -o habana-result.webp)",
+      "Bash(sips -s format png habana-result.webp --out habana-result.png)",
+      "Bash(rm -f /private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-*.* 2>/dev/null; echo cleaned)",
+      "Bash(curl -s \"https://cdn.handdn.com/wp-content/uploads/2024/10/29221223/Fern-Green-Habana-Double-Padded2.jpg\" -o /private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad/habana-ref2.jpg)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s \"https://replicate.delivery/xezq/rQGdw8u4svoVEdo6uLjPpioAUUrLNGvqxexyvOIbGiRevwetA/tmpuv5mgu48.webp\" -o habana-result2.webp)",
+      "Bash(sips -s format png habana-result2.webp --out habana-result2.png)",
+      "Bash(curl -s \"https://replicate.delivery/xezq/kDGgp6zzpyKPPRsoszXDZbZrqCnvAsohYKdYKxscoZqyRsvF/tmpq13uk5aw.webp\" -o habana-result3.webp)",
+      "Bash(sips -s format png habana-result3.webp --out habana-result3.png)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gsd-sdk query *)",
+      "Read(//Users/phuongnam/.claude/get-shit-done/templates/**)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp/claude-501/-Users-phuongnam-Documents-watch-customizer-app/8b29508b-f983-4781-83c2-0f46b6c81fdd/scratchpad"
+    ]
+  }
+}

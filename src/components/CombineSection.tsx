@@ -1,7 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+
+// Rotating status text shown while /api/generate is running (~30-50s for FLUX-2-PRO) — describes
+// the real pipeline order (see route.ts steps 1-6) so it stays honest, not a fake progress bar.
+const PROCESSING_STEPS: { afterSeconds: number; label: string }[] = [
+  { afterSeconds: 0, label: 'Reading strap texture & color...' },
+  { afterSeconds: 8, label: 'Matching watch case & dial...' },
+  { afterSeconds: 18, label: 'Assembling the wristwatch...' },
+  { afterSeconds: 30, label: 'Finalizing details — almost there...' },
+];
 
 // Merges the strap + face images into one via HTML5 Canvas, client-side
 const mergeImagesWithCanvas = async (strapUrl: string, faceBase64: string): Promise<string> => {
@@ -55,6 +64,22 @@ export default function CombineSection() {
   const { selectedStrap, uploadedFace } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const intervalId = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [isGenerating]);
+
+  const currentStepLabel = [...PROCESSING_STEPS]
+    .reverse()
+    .find((step) => elapsedSeconds >= step.afterSeconds)!.label;
 
   const handleCombine = async () => {
     console.log("--- DEBUG COMBINE ---");
@@ -128,7 +153,8 @@ export default function CombineSection() {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-black font-semibold uppercase tracking-widest motion-safe:animate-pulse">Processing...</p>
+              <p className="text-xs text-black font-semibold uppercase tracking-widest motion-safe:animate-pulse">{currentStepLabel}</p>
+              <p className="text-[11px] text-gray-400 tabular-nums">{elapsedSeconds}s</p>
             </div>
           ) : resultImage ? (
              <img src={resultImage} alt="Generated result" className="w-full h-full object-contain" />
