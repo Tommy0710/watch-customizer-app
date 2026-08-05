@@ -122,7 +122,11 @@ export async function POST(request: Request) {
         // still looking near-equal). 0.33 was still not consistently obeyed by the model (one real test
         // came back ~75% instead of the intended ~41%) — dropped further to 0.28 to push the draft's
         // visual cue harder, paired with an explicit numeric target in the prompt text below.
-        const SHORT_END_TOP_RATIO = 0.28;
+        // 0.28 overshot the other way: a real generation measured ~23% (buckle segment noticeably
+        // shorter than even the intended 40-50%). This visual cue was fighting the prompt text's own
+        // "roughly 40-50%" instead of reinforcing it — raised to 0.40 to match the text target instead
+        // of contradicting it, since the model leans on this visual ratio more than on text alone.
+        const SHORT_END_TOP_RATIO = 0.40;
         const faceTop = Math.max(0, Math.round(strapResizedHeight * SHORT_END_TOP_RATIO - resizedFaceHeight / 2));
         const faceLeft = Math.max(0, Math.round((strapResizedWidth - targetFaceWidth) / 2));
 
