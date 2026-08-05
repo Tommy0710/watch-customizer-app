@@ -167,7 +167,7 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
 
     if (profile.canvasAlligatorMix) {
         sentences.push(
-            "This strap is a mixed-material construction, not a single uniform material: a short leather cap section with an alligator/croc scale pattern covers only the part nearest the spring bars and lugs at each end, and the remaining majority of the strap's length — including the tail toward the buckle and holes — is a woven canvas/fabric texture, not leather. Reproduce both materials exactly as shown in image 2, with a clean stitched transition seam where the alligator leather cap meets the canvas section near each lug — do not render the entire strap as one uniform material.",
+            "This strap is a mixed-material construction, not a single uniform material: a short leather cap section with an alligator/croc scale pattern covers only the part nearest the spring bars and lugs at each end, and the remaining majority of the strap's length — including the tail toward the buckle and holes — is a woven canvas/fabric texture, not leather. Reproduce both materials exactly as shown in image 2, with a clean stitched transition seam where the alligator leather cap meets the canvas section near each lug — do not render the entire strap as one uniform material. Match the alligator cap's length proportionally to how it actually appears in image 2 — if image 2 shows the alligator section covering a substantial, clearly visible portion of the strap's length near the lugs, reproduce that same proportion; do not shrink it down to a token sliver.",
         );
     }
 
