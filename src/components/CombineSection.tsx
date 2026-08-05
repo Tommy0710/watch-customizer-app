@@ -61,7 +61,7 @@ const mergeImagesWithCanvas = async (strapUrl: string, faceBase64: string): Prom
 };
 
 export default function CombineSection() {
-  const { selectedStrap, uploadedFace } = useAppStore();
+  const { selectedStrap, uploadedFace, cachedFaceCrop, setCachedFaceCrop } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -100,7 +100,10 @@ export default function CombineSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           strapImage: selectedStrap.image, // URL (e.g. https://cdn.handdn.com/...)
-          faceImage: uploadedFace,         // Base64 (e.g. data:image/jpeg;base64,...)
+          // Reuse a previously server-cropped face (from an earlier Combine with the same photo)
+          // when available, so /api/generate can skip re-running watch-face detection.
+          faceImage: cachedFaceCrop ?? uploadedFace,
+          faceAlreadyCropped: !!cachedFaceCrop,
           strapName: selectedStrap.name,
           strapCategories: (selectedStrap.categories || []).map((c) => c.name),
           strapAttributes: selectedStrap.attributes || [],
@@ -120,6 +123,9 @@ export default function CombineSection() {
       const data = await response.json();
       if (data.success) {
         setResultImage(data.resultImage);
+        if (data.croppedFace && !cachedFaceCrop) {
+          setCachedFaceCrop(data.croppedFace);
+        }
       } else {
         alert("Something went wrong: " + data.error);
       }

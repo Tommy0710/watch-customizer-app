@@ -106,7 +106,7 @@ async function cropToWatchFace(faceBuffer: Buffer): Promise<Buffer> {
 
         if (width < 10 || height < 10) return faceBuffer;
 
-        return await sharp(faceBuffer).extract({ left, top, width, height }).toBuffer();
+        return await sharp(faceBuffer).extract({ left, top, width, height }).jpeg({ quality: 90 }).toBuffer();
     } catch (error) {
         console.warn(
             '⚠️ Watch face detection failed — using the full uploaded photo instead:',
@@ -118,7 +118,7 @@ async function cropToWatchFace(faceBuffer: Buffer): Promise<Buffer> {
 
 export async function POST(request: Request) {
     try {
-        const { strapImage, faceImage, strapName = '', strapCategories = [], strapAttributes = [] } = await request.json();
+        const { strapImage, faceImage, faceAlreadyCropped = false, strapName = '', strapCategories = [], strapAttributes = [] } = await request.json();
 
         if (!strapImage || !faceImage) {
             return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
@@ -145,10 +145,17 @@ export async function POST(request: Request) {
 
         // 1b. Customer-uploaded photos (not S3 library picks, which are already clean) often show
         // a hand/wrist holding the watch — crop down to just the case/dial before it becomes a
-        // FLUX reference image. See cropToWatchFace doc comment above.
-        const faceBuffer = faceImage.startsWith('s3://')
+        // FLUX reference image. See cropToWatchFace doc comment above. Skipped when the client
+        // already sent a previously-cropped result (faceAlreadyCropped) to avoid re-running
+        // detection for the same photo across multiple Combine attempts with different straps.
+        const faceBuffer = faceImage.startsWith('s3://') || faceAlreadyCropped
             ? rawFaceBuffer
             : await cropToWatchFace(rawFaceBuffer);
+
+        // Only true when cropToWatchFace actually ran AND produced a genuinely new buffer (a real
+        // crop succeeded) — false on any fallback path or when detection was skipped entirely.
+        // Used to decide whether to hand the cropped result back to the client for caching.
+        const didCropJustNow = faceBuffer !== rawFaceBuffer;
 
         // 2. Read the watch strap image
         let strapBuffer: Buffer;
@@ -307,7 +314,13 @@ export async function POST(request: Request) {
         if (!output) throw new Error("Did not receive a valid result. Please try again.");
         const imageUrl = typeof output === 'string' ? output : output.url();
 
-        return NextResponse.json({ success: true, resultImage: imageUrl });
+        return NextResponse.json({
+            success: true,
+            resultImage: imageUrl,
+            // Hand the freshly-cropped face back to the client so it can cache and resend it on
+            // the next Combine (different strap, same photo) instead of paying for detection again.
+            ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
+        });
 
     } catch (error: any) {
         console.error("❌ Processing error:", error);
