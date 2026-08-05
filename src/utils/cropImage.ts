@@ -75,6 +75,30 @@ export default async function getCroppedImg(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.globalCompositeOperation = 'source-over';
 
-  // Trả về bức ảnh đã cắt gọn gàng dưới dạng Base64 (PNG để giữ chất lượng cao nhất)
-  return canvas.toDataURL('image/png');
+  // Ảnh upload desktop có thể ở độ phân giải gốc rất cao (điện thoại/máy ảnh hiện đại,
+  // 3000-4000px+); /api/generate luôn resize lại face xuống một phần nhỏ của độ rộng dây
+  // (targetFaceWidth = strap width * 0.16, tối đa ~256px) trước khi gửi cho Replicate, nên độ
+  // phân giải gốc không bao giờ thực sự được dùng — chỉ làm payload gửi lên /api/generate phình
+  // to không cần thiết, có thể vượt giới hạn kích thước request của Vercel Function (413
+  // FUNCTION_PAYLOAD_TOO_LARGE). Cap xuống 1200px (chỉ thu nhỏ, không phóng to ảnh crop nhỏ hơn)
+  // trước khi encode, vẫn dư thừa so với mức server thực sự dùng.
+  const MAX_FACE_CROP_DIMENSION = 1200;
+  if (canvas.width > MAX_FACE_CROP_DIMENSION) {
+    const scaledCanvas = document.createElement('canvas');
+    const scaledCtx = scaledCanvas.getContext('2d');
+    if (!scaledCtx) {
+      throw new Error('No 2d context');
+    }
+    scaledCanvas.width = MAX_FACE_CROP_DIMENSION;
+    scaledCanvas.height = MAX_FACE_CROP_DIMENSION;
+    scaledCtx.drawImage(canvas, 0, 0, MAX_FACE_CROP_DIMENSION, MAX_FACE_CROP_DIMENSION);
+    canvas.width = MAX_FACE_CROP_DIMENSION;
+    canvas.height = MAX_FACE_CROP_DIMENSION;
+    ctx.drawImage(scaledCanvas, 0, 0);
+  }
+
+  // Trả về bức ảnh đã cắt gọn gàng dưới dạng Base64. Nền canvas đã được tô trắng đục ở trên nên
+  // không còn kênh alpha cần giữ — dùng JPEG nén (khớp định dạng/chất lượng đã dùng ổn định ở
+  // luồng mobile, xem src/app/mobile-upload/page.tsx) thay vì PNG lossless để giữ payload nhỏ.
+  return canvas.toDataURL('image/jpeg', 0.92);
 }
