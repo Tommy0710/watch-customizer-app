@@ -3,6 +3,8 @@ export const maxDuration = 60; // Avoids a Vercel timeout error
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import sharp from 'sharp';
+import { generateText, Output } from 'ai';
+import { z } from 'zod';
 import { getObjectBuffer } from '@/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '@/lib/strapProfile';
 
@@ -21,9 +23,102 @@ async function loadFaceBuffer(faceImage: string): Promise<Buffer> {
     return Buffer.from(base64Data, 'base64');
 }
 
+// Cheap vision model used only to locate the watch case/dial in a customer-uploaded photo, via
+// the Vercel AI Gateway (AI_GATEWAY_API_KEY). Picked for cost: a detection call is a few hundred
+// tokens (~$0.0001-0.0002), negligible next to a ~$0.02-0.05 FLUX-2-PRO generation call.
+const WATCH_FACE_DETECT_MODEL = 'openai/gpt-5-nano';
+// USD/token pricing for WATCH_FACE_DETECT_MODEL, from the AI Gateway model list
+// (https://ai-gateway.vercel.sh/v1/models) as of this writing — used only to log an estimated
+// cost per call for tracking; re-check the gateway if pricing ever needs verifying.
+const WATCH_FACE_DETECT_PRICE_PER_INPUT_TOKEN = 0.00000005;
+const WATCH_FACE_DETECT_PRICE_PER_OUTPUT_TOKEN = 0.0000004;
+
+const watchFaceBoxSchema = z.object({
+    found: z.boolean().describe('true if a watch case/dial is visible in the photo'),
+    x: z.number().min(0).max(1).describe('left edge of the watch, as a fraction of image width (0-1)'),
+    y: z.number().min(0).max(1).describe('top edge of the watch, as a fraction of image height (0-1)'),
+    width: z.number().min(0).max(1).describe('width of the watch bounding box, as a fraction of image width (0-1)'),
+    height: z.number().min(0).max(1).describe('height of the watch bounding box, as a fraction of image height (0-1)'),
+});
+
+// Crops a customer-uploaded photo down to just the watch case/dial before it's used as a FLUX
+// reference image. Customer photos often show a hand/wrist holding the watch, and its own
+// original strap — FLUX has been observed to literally copy the hand/strap into the final result
+// despite prompt instructions telling it to ignore them (see the prompt's Image 3 clause below).
+// A real crop removes the hand/background/original strap outright instead of relying on FLUX to
+// "understand" what to ignore from text alone. Never blocks generation: any failure (API error,
+// no watch detected, degenerate box) falls back to the original uncropped photo, so this can only
+// help — never regress — the existing pipeline.
+async function cropToWatchFace(faceBuffer: Buffer): Promise<Buffer> {
+    try {
+        const meta = await sharp(faceBuffer).metadata();
+        const imgWidth = meta.width;
+        const imgHeight = meta.height;
+        if (!imgWidth || !imgHeight) return faceBuffer;
+
+        const result = await generateText({
+            model: WATCH_FACE_DETECT_MODEL,
+            output: Output.object({ schema: watchFaceBoxSchema }),
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: "Locate the watch case and dial (the round or rectangular timepiece head) in this photo. Return a tight bounding box around only the watch case and dial — exclude any hand, fingers, wrist, skin, or background. If a strap is attached, exclude the strap too; only the case/dial matters. If no watch is visible, set found to false.",
+                        },
+                        {
+                            type: 'file',
+                            data: faceBuffer,
+                            mediaType: meta.format ? `image/${meta.format}` : 'image/jpeg',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        const usage = result.usage;
+        const estimatedCost =
+            (usage.inputTokens ?? 0) * WATCH_FACE_DETECT_PRICE_PER_INPUT_TOKEN +
+            (usage.outputTokens ?? 0) * WATCH_FACE_DETECT_PRICE_PER_OUTPUT_TOKEN;
+        console.log(
+            `🔍 Watch face detection (${WATCH_FACE_DETECT_MODEL}): ${usage.inputTokens ?? '?'} in / ${usage.outputTokens ?? '?'} out tokens, ~$${estimatedCost.toFixed(6)}`,
+        );
+
+        const box = result.output;
+        if (!box.found || box.width <= 0.02 || box.height <= 0.02) {
+            console.warn('⚠️ Watch face detection found nothing usable — using the full uploaded photo instead.');
+            return faceBuffer;
+        }
+
+        // Pad the box outward a bit — a tight box risks clipping the case edge; err on the side of
+        // including a little extra rather than cutting off part of the watch.
+        const PADDING_RATIO = 0.08;
+        const paddedWidth = Math.min(1, box.width * (1 + PADDING_RATIO * 2));
+        const paddedHeight = Math.min(1, box.height * (1 + PADDING_RATIO * 2));
+        const paddedX = Math.max(0, box.x - box.width * PADDING_RATIO);
+        const paddedY = Math.max(0, box.y - box.height * PADDING_RATIO);
+
+        const left = Math.round(paddedX * imgWidth);
+        const top = Math.round(paddedY * imgHeight);
+        const width = Math.min(imgWidth - left, Math.round(paddedWidth * imgWidth));
+        const height = Math.min(imgHeight - top, Math.round(paddedHeight * imgHeight));
+
+        if (width < 10 || height < 10) return faceBuffer;
+
+        return await sharp(faceBuffer).extract({ left, top, width, height }).jpeg({ quality: 90 }).toBuffer();
+    } catch (error) {
+        console.warn(
+            '⚠️ Watch face detection failed — using the full uploaded photo instead:',
+            error instanceof Error ? error.message : error,
+        );
+        return faceBuffer;
+    }
+}
+
 export async function POST(request: Request) {
     try {
-        const { strapImage, faceImage, strapName = '', strapCategories = [], strapAttributes = [] } = await request.json();
+        const { strapImage, faceImage, faceAlreadyCropped = false, strapName = '', strapCategories = [], strapAttributes = [] } = await request.json();
 
         if (!strapImage || !faceImage) {
             return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
@@ -46,7 +141,21 @@ export async function POST(request: Request) {
         const strapProfileClause = buildStrapProfileClause(strapProfile);
 
         // 1. Read the watch face image (base64 or from the S3 library)
-        const faceBuffer = await loadFaceBuffer(faceImage);
+        const rawFaceBuffer = await loadFaceBuffer(faceImage);
+
+        // 1b. Customer-uploaded photos (not S3 library picks, which are already clean) often show
+        // a hand/wrist holding the watch — crop down to just the case/dial before it becomes a
+        // FLUX reference image. See cropToWatchFace doc comment above. Skipped when the client
+        // already sent a previously-cropped result (faceAlreadyCropped) to avoid re-running
+        // detection for the same photo across multiple Combine attempts with different straps.
+        const faceBuffer = faceImage.startsWith('s3://') || faceAlreadyCropped
+            ? rawFaceBuffer
+            : await cropToWatchFace(rawFaceBuffer);
+
+        // Only true when cropToWatchFace actually ran AND produced a genuinely new buffer (a real
+        // crop succeeded) — false on any fallback path or when detection was skipped entirely.
+        // Used to decide whether to hand the cropped result back to the client for caching.
+        const didCropJustNow = faceBuffer !== rawFaceBuffer;
 
         // 2. Read the watch strap image
         let strapBuffer: Buffer;
@@ -177,7 +286,7 @@ export async function POST(request: Request) {
         // 6. CALL THE MODEL WITH 3 REFERENCE IMAGES
         const replicateInput = {
             seed: 19826,
-            prompt: "Image 1 shows the required composition, scale, and placement — the watch head positioned between two strap ends, compact and modest in size relative to the strap. Image 2 is the exact texture/color/grain reference for the watch strap only, not a length-ratio reference even if it looks symmetric — reproduce its leather color, pattern, stitching, grain, and edge finishing pixel-for-pixel, ignoring its background; if image 2 shows the strap staged on or beside larger leather hides or swatches used as a photography backdrop, the actual product is only the narrow strip with a buckle and/or punched holes — use that strip's material only, completely disregarding the larger background leather pieces, even when those background pieces occupy most of the frame and the actual strap is a small diagonal object within it; zoom in mentally on just that small strap object and copy its exact color and scale pattern, including any faint color undertones such as green, blue, or purple patina — do not default to a generic brown or plain black leather when the reference photo is dark, busy, or hard to parse. Image 3 is the exact shape/design reference for the case and dial only, not a scale reference even though it fills its own frame — reproduce its case shape, dial design, hands, indices, subdials, crown, and lugs identical, ignoring its background. If the photo shows a human hand, fingers, wrist, or skin holding, wearing, or framing the watch, treat that as part of the disregarded background too — extract only the watch case and dial itself, exactly as if it were a clean studio product photo from an existing reference library, and never reproduce any hand, finger, skin, or wrist tone anywhere in the final result. The watch in image 3 may still be attached to its own original strap — disregard that original strap completely too, including any sliver of it visible right next to the lugs; the case and dial are the only parts of image 3 that matter, and the strap in the final result must come entirely from image 2, with zero color, texture, or material influence from whatever strap image 3 happened to be photographed with. Using image 1 only for scale and placement, assemble one complete, photorealistic wristwatch: the strap is a single continuous piece threaded through the case on both sides via a physically correct spring bar under the four lugs, matching strap width to the inner lug spacing — never two parallel strap pieces on one side, and never two disconnected or floating strap segments that fail to connect to the case. Segment lengths follow image 1 and this rule, not image 2: the buckle-side segment must be clearly and noticeably shorter than the holes-side segment, roughly 28-32% of its length — never equal, near-equal, or only mildly shorter, even if the strap reference photo looks close to symmetric. Only refine the small transition areas where the strap meets the lugs — do not redesign, simplify, duplicate, or reinterpret any part of the strap or watch case. The result must be centered, perfectly symmetrical left-to-right, photographed top-down in sharp 8k focus with soft professional studio lighting and shadows, on a pure solid light-gray or white studio background." + strapProfileClause,
+            prompt: "Image 1 shows the required composition, scale, and placement — the watch head positioned between two strap ends, compact and modest in size relative to the strap. Image 2 is the exact texture/color/grain reference for the watch strap only, not a length-ratio reference even if it looks symmetric — reproduce its leather color, pattern, stitching, grain, and edge finishing pixel-for-pixel, ignoring its background; if image 2 shows the strap staged on or beside larger leather hides or swatches used as a photography backdrop, the actual product is only the narrow strip with a buckle and/or punched holes — use that strip's material only, completely disregarding the larger background leather pieces, even when those background pieces occupy most of the frame and the actual strap is a small diagonal object within it; zoom in mentally on just that small strap object and copy its exact color and scale pattern, including any faint color undertones such as green, blue, or purple patina — do not default to a generic brown or plain black leather when the reference photo is dark, busy, or hard to parse. Image 3 is the exact shape/design reference for the case and dial only, not a scale reference even though it fills its own frame — reproduce its case shape, dial design, hands, indices, subdials, crown, and lugs identical, ignoring its background. If the photo shows a human hand, fingers, wrist, or skin holding, wearing, or framing the watch, treat that as part of the disregarded background too — extract only the watch case and dial itself, exactly as if it were a clean studio product photo from an existing reference library, and never reproduce any hand, finger, skin, or wrist tone anywhere in the final result. The watch in image 3 may still be attached to its own original strap — disregard that original strap completely too, including any sliver of it visible right next to the lugs; the case and dial are the only parts of image 3 that matter, and the strap in the final result must come entirely from image 2, with zero color, texture, or material influence from whatever strap image 3 happened to be photographed with. Using image 1 only for scale and placement, assemble one complete, photorealistic wristwatch — the case and dial from image 3 must always be visibly present and attached to the strap in the result; never output the strap alone with no case, and never crop or omit the case: the strap is a single continuous piece threaded through the case on both sides via a physically correct spring bar under the four lugs, matching strap width to the inner lug spacing — never two parallel strap pieces on one side, and never two disconnected or floating strap segments that fail to connect to the case. Segment lengths follow image 1 and this rule, not image 2: the buckle-side segment must be clearly and noticeably shorter than the holes-side segment, roughly 28-32% of its length — never equal, near-equal, or only mildly shorter, even if the strap reference photo looks close to symmetric. Only refine the small transition areas where the strap meets the lugs — do not redesign, simplify, duplicate, or reinterpret any part of the strap or watch case. The result must be centered, perfectly symmetrical left-to-right, photographed top-down in sharp 8k focus with soft professional studio lighting and shadows, on a pure solid light-gray or white studio background." + strapProfileClause,
             resolution: "2 MP",
             aspect_ratio: "9:16",
             input_images: [draftCompositeDataUri, strapReferenceDataUri, faceReferenceDataUri],
@@ -189,14 +298,25 @@ export async function POST(request: Request) {
 
         // Replicate's safety filter occasionally throws a transient "E005 flagged as sensitive"
         // false positive on completely normal inputs — an identical retry succeeds immediately.
-        // Retry once so a random false positive doesn't surface as a failed generation to the customer.
+        // Separately, Replicate's own API occasionally returns a bare 500 Internal Server Error
+        // with no useful detail (confirmed via a real production error log) — Replicate's error
+        // code docs (E1000 "Unknown Error") explicitly recommend retrying these rather than
+        // treating them as permanent failures, so 5xx responses get the same one-retry treatment.
+        // 4xx responses are NOT retried — those mean the request itself was rejected and an
+        // identical retry would just fail the same way again.
         let output: any;
         try {
             output = await replicate.run("black-forest-labs/flux-2-pro", { input: replicateInput });
         } catch (err: any) {
             const isFlaggedSensitive = String(err?.message ?? err).includes('E005') || String(err?.message ?? err).toLowerCase().includes('flagged as sensitive');
-            if (!isFlaggedSensitive) throw err;
-            console.warn("⚠️ Replicate flagged the request as sensitive (likely a false positive) — retrying once...");
+            const status = err?.response?.status;
+            const isTransientServerError = typeof status === 'number' && status >= 500;
+            if (!isFlaggedSensitive && !isTransientServerError) throw err;
+            console.warn(
+                isTransientServerError
+                    ? `⚠️ Replicate returned a transient server error (status ${status}) — retrying once...`
+                    : "⚠️ Replicate flagged the request as sensitive (likely a false positive) — retrying once...",
+            );
             output = await replicate.run("black-forest-labs/flux-2-pro", { input: replicateInput });
         }
 
@@ -205,7 +325,13 @@ export async function POST(request: Request) {
         if (!output) throw new Error("Did not receive a valid result. Please try again.");
         const imageUrl = typeof output === 'string' ? output : output.url();
 
-        return NextResponse.json({ success: true, resultImage: imageUrl });
+        return NextResponse.json({
+            success: true,
+            resultImage: imageUrl,
+            // Hand the freshly-cropped face back to the client so it can cache and resend it on
+            // the next Combine (different strap, same photo) instead of paying for detection again.
+            ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
+        });
 
     } catch (error: any) {
         console.error("❌ Processing error:", error);
