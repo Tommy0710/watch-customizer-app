@@ -298,14 +298,25 @@ export async function POST(request: Request) {
 
         // Replicate's safety filter occasionally throws a transient "E005 flagged as sensitive"
         // false positive on completely normal inputs — an identical retry succeeds immediately.
-        // Retry once so a random false positive doesn't surface as a failed generation to the customer.
+        // Separately, Replicate's own API occasionally returns a bare 500 Internal Server Error
+        // with no useful detail (confirmed via a real production error log) — Replicate's error
+        // code docs (E1000 "Unknown Error") explicitly recommend retrying these rather than
+        // treating them as permanent failures, so 5xx responses get the same one-retry treatment.
+        // 4xx responses are NOT retried — those mean the request itself was rejected and an
+        // identical retry would just fail the same way again.
         let output: any;
         try {
             output = await replicate.run("black-forest-labs/flux-2-pro", { input: replicateInput });
         } catch (err: any) {
             const isFlaggedSensitive = String(err?.message ?? err).includes('E005') || String(err?.message ?? err).toLowerCase().includes('flagged as sensitive');
-            if (!isFlaggedSensitive) throw err;
-            console.warn("⚠️ Replicate flagged the request as sensitive (likely a false positive) — retrying once...");
+            const status = err?.response?.status;
+            const isTransientServerError = typeof status === 'number' && status >= 500;
+            if (!isFlaggedSensitive && !isTransientServerError) throw err;
+            console.warn(
+                isTransientServerError
+                    ? `⚠️ Replicate returned a transient server error (status ${status}) — retrying once...`
+                    : "⚠️ Replicate flagged the request as sensitive (likely a false positive) — retrying once...",
+            );
             output = await replicate.run("black-forest-labs/flux-2-pro", { input: replicateInput });
         }
 
