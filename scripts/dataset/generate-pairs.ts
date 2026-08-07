@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { buildDraftComposite } from '../../src/lib/draftComposite';
+import { cropToStrap } from '../../src/lib/cropStrap';
 import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfile';
@@ -105,11 +106,15 @@ async function main() {
             }
         }
 
-        const [strapBuffer, { buffer: faceBuffer }] = await Promise.all([
+        const [rawStrapBuffer, { buffer: faceBuffer }] = await Promise.all([
             loadStrapBuffer(combo.strapImage),
             getObjectBuffer(combo.faceKey),
         ]);
 
+        // Catalog photos are staged squares with the strap lying diagonally on a prop — see the
+        // comment in cropStrap.ts. Without this the watch head is placed relative to the photo
+        // frame rather than the strap, and backdrops get baked into the training input.
+        const strapBuffer = await cropToStrap(rawStrapBuffer);
         const draft = await buildDraftComposite(strapBuffer, faceBuffer);
         await writeFile(path.join(PAIR_DIR, `${combo.id}_start.png`), draft);
 
