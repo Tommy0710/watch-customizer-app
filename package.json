@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ds": "tsx --env-file=.env.local"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
@@ -37,6 +40,8 @@
     "eslint-config-next": "16.2.3",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "tsx": "^4.23.10",
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

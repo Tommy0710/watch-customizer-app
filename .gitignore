@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# LoRA dataset artifacts (large, contains catalog imagery)
+scripts/dataset/out/
