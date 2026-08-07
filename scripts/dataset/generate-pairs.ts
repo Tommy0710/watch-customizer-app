@@ -2,7 +2,6 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { buildDraftComposite } from '../../src/lib/draftComposite';
-import { cropToStrap } from '../../src/lib/cropStrap';
 import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfile';
@@ -31,9 +30,14 @@ async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
 }
 
-async function loadStrapBuffer(url: string): Promise<Buffer> {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Could not download strap image ${url} (${res.status})`);
+async function loadPreparedStrap(productId: number, fallbackUrl: string): Promise<Buffer> {
+    const prepared = path.join(OUT_DIR, 'straps', `${productId}.png`);
+    if (await exists(prepared)) return readFile(prepared);
+    // prepare-straps.ts writes a file for every product, including ones detection could not crop,
+    // so a miss here means it simply has not been run for this combo yet.
+    console.warn(`  ⚠️ no prepared strap for product ${productId} — run prepare-straps.ts first; using the raw photo`);
+    const res = await fetch(fallbackUrl);
+    if (!res.ok) throw new Error(`Could not download strap image ${fallbackUrl} (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
 }
 
@@ -106,15 +110,14 @@ async function main() {
             }
         }
 
-        const [rawStrapBuffer, { buffer: faceBuffer }] = await Promise.all([
-            loadStrapBuffer(combo.strapImage),
+        // Straps come from the prepared, already-cropped catalog written by prepare-straps.ts.
+        // Detection happens there — once per product, offline — so this script makes no vision
+        // call at all, and neither will production once it switches to the trained model.
+        const [strapBuffer, { buffer: faceBuffer }] = await Promise.all([
+            loadPreparedStrap(combo.productId, combo.strapImage),
             getObjectBuffer(combo.faceKey),
         ]);
 
-        // Catalog photos are staged squares with the strap lying diagonally on a prop — see the
-        // comment in cropStrap.ts. Without this the watch head is placed relative to the photo
-        // frame rather than the strap, and backdrops get baked into the training input.
-        const strapBuffer = await cropToStrap(rawStrapBuffer);
         const draft = await buildDraftComposite(strapBuffer, faceBuffer);
         await writeFile(path.join(PAIR_DIR, `${combo.id}_start.png`), draft);
 

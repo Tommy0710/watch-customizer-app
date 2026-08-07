@@ -187,8 +187,16 @@ Sau bước này `/api/generate` còn khoảng 1/3 kích thước hiện tại.
 **R2 — Ổn định chỉ nằm trong vùng đã phủ.** PRO có kiến thức tổng quát; LoRA ~45-250 mẫu thì không. Gặp chất liệu/kiểu dây lạ, LoRA có thể hỏng nặng hơn PRO — và sau khi xoá PRO thì không còn đường lui.
 *Giảm thiểu:* chọn tổ hợp phủ đều thay vì lấy nhiều; quy trình train lại ở mục 7; chỉ xoá PRO sau vòng mở rộng.
 
-**R3 — Ảnh dây có phông phức tạp.** Prompt hiện tại có cả một đoạn dài dạy PRO bỏ qua các tấm da lớn dùng làm phông. Với draft một ảnh, phông đó nằm luôn trong input và LoRA phải học cách xoá — khó hơn.
-*Giảm thiểu:* cố ý đưa ~10 mẫu loại này vào pilot để đo. Nếu hỏng, phương án dự phòng là dùng `gpt-5-nano` crop dây ra khỏi phông trước khi composite, đối xứng với `cropToWatchFace` đã có.
+**R3 — Ảnh dây có phông phức tạp. ĐÃ XẢY RA, đã xử lý (2026-08-07).**
+Rủi ro này được ước lượng là "~10 trên 100 ảnh". Đo thực tế trên mẫu 30/443 sản phẩm: **30/30 là ảnh vuông dàn dựng**, không có ảnh nào là crop dọc sạch. Dây nằm chéo trên tấm da lớn, cuộn vải, hoặc đạo cụ khác chiếm phần lớn khung.
+
+Hậu quả quan sát được trên 3 ảnh draft đầu tiên: mặt đồng hồ bị đặt theo khung *bức ảnh* chứ không theo *thân dây*, nên rơi ra giữa phông nền cách xa lugs; và toàn bộ đạo cụ bị nướng vào ảnh input mà LoRA sẽ phải học xoá.
+
+*Đã xử lý bằng `scripts/dataset/prepare-straps.ts` + `src/lib/cropStrap.ts`:* cắt ảnh dây **một lần cho cả catalog, offline**, lưu kết quả lại; cả lúc train lẫn lúc phục vụ khách đều đọc ảnh đã sạch. Cùng mô hình với `/api/faces/sync` và `/api/woocommerce/sync` đang có.
+
+Điểm quan trọng (theo yêu cầu của người dùng ngày 2026-08-07): **không có lời gọi vision nào ở thời điểm request.** Dịch vụ ngoài chỉ được dùng một lần lúc chuẩn bị catalog, không phải phụ thuộc thường trực khi chạy.
+
+*Ghi chú vận hành:* Vercel AI Gateway free tier giới hạn **tốc độ theo phút**, không phải hết quota — gọi dồn sẽ lỗi `Free tier requests exceeded`, giãn nhịp ~8s/lần thì chạy bình thường.
 
 **R4 — Mất chi tiết mặt số.** Hiện ảnh reference thứ 3 cấp chi tiết mặt số độ phân giải cao. Draft một ảnh chỉ có mặt số ở ~16% bề rộng.
 *Đánh giá:* output 9:16 cũng chỉ hiển thị mặt số ở cỡ tương đương, nên về lý thuyết đủ. *Giảm thiểu:* đo cụ thể ở tiêu chí eval; nếu hỏng, phương án dự phòng là draft hai panel (draft + inset mặt số độ phân giải cao), đổi lại mất độ phân giải tổng thể.
