@@ -1,3 +1,5 @@
+import sharp from 'sharp';
+
 // Renders the single normalized input image the Kontext LoRA is trained and served on.
 // This module is the ONE place the draft's geometry is defined: the dataset scripts and the
 // production route must both call it. If the two ever build drafts differently, the model is
@@ -66,4 +68,49 @@ export function computeDraftLayout(input: {
 
 function clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
+}
+
+// PNG, not JPEG: JPEG chroma subsampling visibly degrades fine repeating strap patterns, which is
+// exactly the detail the model has to copy. Same reasoning as the production pipeline.
+export async function buildDraftComposite(strapBuffer: Buffer, faceBuffer: Buffer): Promise<Buffer> {
+    const strapMeta = await sharp(strapBuffer).metadata();
+    const faceMeta = await sharp(faceBuffer).metadata();
+    if (!strapMeta.width || !strapMeta.height) throw new Error('Strap image has no readable dimensions');
+    if (!faceMeta.width || !faceMeta.height) throw new Error('Face image has no readable dimensions');
+
+    const layout = computeDraftLayout({
+        strapWidth: strapMeta.width,
+        strapHeight: strapMeta.height,
+        faceWidth: faceMeta.width,
+        faceHeight: faceMeta.height,
+    });
+
+    // flatten() first: library faces are often transparent PNGs, and compositing those over the
+    // strap would show the strap through the dial instead of covering it.
+    const strapLayer = await sharp(strapBuffer)
+        .resize({ width: layout.strapWidth, height: layout.strapHeight, fit: 'fill' })
+        .flatten({ background: '#ffffff' })
+        .png()
+        .toBuffer();
+
+    const faceLayer = await sharp(faceBuffer)
+        .resize({ width: layout.faceWidth, height: layout.faceHeight, fit: 'fill' })
+        .flatten({ background: '#ffffff' })
+        .png()
+        .toBuffer();
+
+    return sharp({
+        create: {
+            width: DRAFT_CANVAS_WIDTH,
+            height: DRAFT_CANVAS_HEIGHT,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 },
+        },
+    })
+        .composite([
+            { input: strapLayer, left: layout.strapLeft, top: layout.strapTop },
+            { input: faceLayer, left: layout.faceLeft, top: layout.faceTop },
+        ])
+        .png({ compressionLevel: 9 })
+        .toBuffer();
 }
