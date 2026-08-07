@@ -25,8 +25,8 @@
 
 ## Manual prerequisites (do before Task 11)
 
-1. Create an empty model at `https://replicate.com/create` owned by `tommy0710`, named `watch-lora`, visibility **private**, hardware **H100**. Trainings require an existing destination model.
-2. Optional but recommended: create a Hugging Face repo and a write token, then add `HF_TOKEN=` and `HF_REPO_ID=` to `.env.local` so the weights land somewhere you own.
+1. ~~Create the destination model~~ — **DONE 2026-08-07.** `tommy0710/watch-lora` exists (private, `gpu-h100`, no version yet, which is expected until the first training succeeds): https://replicate.com/tommy0710/watch-lora
+2. Optional but recommended: create a Hugging Face repo and a write token, then add `HF_TOKEN=` and `HF_REPO_ID=` to `.env.local` so the weights land somewhere you own. Without these the LoRA exists only inside Replicate — which is exactly the lock-in the "own your weights" goal is meant to avoid.
 
 ---
 
