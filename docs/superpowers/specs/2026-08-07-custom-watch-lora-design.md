@@ -99,19 +99,40 @@ Tiêu chí loại (nghiêm, vì LoRA học đúng cái được duyệt):
 
 **Bước 5 — Đóng gói.** Zip theo `x_start.jpg` / `x_end.jpg`. Không dùng caption riêng; dùng `kontext_prompt_instruction` cố định.
 
-### Quy mô: pilot trước, mở rộng sau
+### Quy mô: giới hạn bởi ngân sách $4.63
 
-| | Pilot (làm ngay) | Mở rộng (chỉ nếu pilot đạt) |
+Ngân sách Replicate khả dụng là **$4.63**, quyết định bởi người dùng ngày 2026-08-07. Toàn bộ quy mô pilot bị cắt theo đó.
+
+| | Pilot (ngân sách $4.63) | Mở rộng (chỉ nếu pilot đạt, cần nạp thêm) |
 |---|---|---|
-| Tổ hợp sinh qua PRO | 100 | +300-500 |
-| Giữ riêng làm held-out | 15 | 60 |
-| Vào vòng duyệt | 85 → giữ ~45 | ~250 |
-| Thời gian duyệt tay | ~45 phút | ~2-3 tiếng |
-| Chi phí PRO | ~$4-6 | ~$20-30 |
-| Chi phí train | ~$3-6 | ~$5-10 |
-| **Tổng** | **< $15** | ~$40 |
+| Tổ hợp sinh qua PRO | **30** (24 train @1MP + 6 held-out @2MP) | +300-500 |
+| Vào vòng duyệt | 24 → giữ **~10-14** | ~250 |
+| Thời gian duyệt tay | ~15 phút | ~2-3 tiếng |
+| `training_steps` | **700** | 1000 |
+| **Tổng** | **$2.20-4.40** | ~$40 |
 
-~45 cặp nằm trong vùng chạy được của Kontext LoRA vì đây là **một phép biến hình duy nhất lặp lại**, không phải học nhiều khái niệm. Nhưng độ phủ mỏng, nên pilot chỉ trả lời được "cách này có chạy không", **chưa** trả lời được "đã đủ tốt để bỏ PRO chưa". Mở rộng dataset là điều kiện bắt buộc trước khi xoá PRO.
+Phân bổ chi tiết:
+
+| Khoản | Ước tính |
+|---|---|
+| Hiệu chuẩn giá: 3 ảnh thử, rồi đối chiếu dashboard Replicate | $0.10-0.20 |
+| Dữ liệu train: 24 tổ hợp @ 1MP | $0.70-1.45 |
+| Baseline held-out: 6 tổ hợp @ 2MP (đúng cấu hình production) | $0.25-0.36 |
+| Train 700 steps | $1.00-2.25 |
+| Eval 6 lần qua LoRA | ~$0.12 |
+
+Hai điều chỉnh so với thiết kế gốc:
+
+- **Dữ liệu train sinh ở 1MP thay vì 2MP.** Canvas train chỉ 832×1472 (1.22 MP) nên không mất chi tiết nào; nếu Replicate tính tiền theo megapixel thì tiết kiệm một nửa. Riêng 6 ảnh held-out vẫn sinh ở 2MP với đúng tham số production, vì chúng là baseline để so sánh công bằng với PRO.
+- **`training_steps` 700 thay vì 1000**, chừa biên an toàn cho khoản chi bất định nhất.
+
+**Hàm chặn chi tiêu là bắt buộc**, không phải tuỳ chọn: mọi script gọi Replicate phải đếm số lần gọi, nhận `--max-spend`, và dừng cứng khi chạm trần. Sau 3 ảnh đầu tiên phải dừng lại để người dùng xác nhận giá thật trên dashboard trước khi tiêu tiếp — mọi con số trong bảng trên là **ước tính chưa xác minh** (Replicate không công bố giá `flux-2-pro` qua API lẫn trang pricing).
+
+### Rủi ro đã được chấp nhận rõ ràng
+
+24 tổ hợp, duyệt xong còn ~10-14 cặp — **đúng mức sàn của Kontext LoRA**. Nếu kết quả tệ, không phân biệt được là *phương pháp không chạy* hay *chỉ thiếu dữ liệu*, và không còn ngân sách train lần hai. Người dùng đã được thông báo và chọn tiến hành (2026-08-07).
+
+Kể cả khi pilot đạt, độ phủ vẫn quá mỏng để kết luận "đủ tốt để bỏ PRO". Mở rộng dataset vẫn là điều kiện bắt buộc trước khi xoá PRO.
 
 ## 5. Train
 
@@ -120,7 +141,7 @@ Tiêu chí loại (nghiêm, vì LoRA học đúng cái được duyệt):
 | Tham số | Giá trị | Lý do |
 |---|---|---|
 | `input_images` | zip từ bước 5 | |
-| `training_steps` | 1000 | mặc định, hợp với ~45 cặp; tăng có nguy cơ overfit |
+| `training_steps` | **700** | cắt từ mặc định 1000 để chừa biên ngân sách; xem mục 4 |
 | `seed` | `19826` | trùng seed đang dùng ở `/api/generate`, để train lại tái lập được |
 | `kontext_prompt_instruction` | `assemble into a finished wristwatch product photo` | chốt cứng, dùng chung mọi ảnh |
 | `hf_repo_id` / `hf_token` | repo riêng của bạn — **cần bạn tạo trước khi chạy** | **để sở hữu weights thật**, không bị khoá trong Replicate |
@@ -131,17 +152,19 @@ Câu `kontext_prompt_instruction` ở trên là **hằng số dùng chung**, ph�
 
 ## 6. Đo và tiêu chí đạt
 
-`eval.ts` chạy 15 tổ hợp held-out (chưa từng train) qua LoRA, dựng contact sheet 3 cột `draft | PRO | LoRA`, đồng thời ghi thời gian thực tế mỗi lần gọi kể cả cold start.
+`eval.ts` chạy **6 tổ hợp held-out** (chưa từng train) qua LoRA, dựng contact sheet 3 cột `draft | PRO | LoRA`, đồng thời ghi thời gian thực tế mỗi lần gọi kể cả cold start.
 
-**Tiêu chí chốt trước khi nhìn kết quả** (để không tự thuyết phục mình):
+**Tiêu chí chốt trước khi nhìn kết quả** (để không tự thuyết phục mình), quy đổi theo cỡ mẫu 6:
 
-1. Lỗi thảm hoạ (mất mặt số, dây tách đôi/rời, sót da tay) **≤ 1/15**
-2. LoRA bằng hoặc hơn PRO về độ chính xác lắp ráp ở **≥ 10/15**
-3. Vân và màu da của dây được giữ đúng ở **≥ 13/15**
+1. Lỗi thảm hoạ (mất mặt số, dây tách đôi/rời, sót da tay) **≤ 1/6**
+2. LoRA bằng hoặc hơn PRO về độ chính xác lắp ráp ở **≥ 4/6**
+3. Vân và màu da của dây được giữ đúng ở **≥ 5/6**
 4. Thời gian trung bình **< 15s** kể cả cold start
 
-Không đạt → dừng, giữ PRO, tổng thiệt hại dưới $15 và có câu trả lời rõ ràng.
-Đạt → mở rộng dataset, train lại, đo lại bằng đúng 4 tiêu chí trên với held-out 60 mẫu.
+Cỡ mẫu 6 quá nhỏ để có ý nghĩa thống kê — nó chỉ đủ phát hiện hỏng nặng, không đủ để đo chênh lệch tinh tế. Đây là hệ quả trực tiếp của ngân sách, đã được chấp nhận.
+
+Không đạt → dừng, giữ PRO, tổng thiệt hại dưới $4.63 và có câu trả lời rõ ràng.
+Đạt → mở rộng dataset (cần nạp thêm tiền), train lại 1000 steps, đo lại bằng đúng 4 tiêu chí trên với held-out 60 mẫu.
 
 ## 7. Chuyển đổi và xoá PRO
 
@@ -187,8 +210,8 @@ Sau bước này `/api/generate` còn khoảng 1/3 kích thước hiện tại.
 
 | Giai đoạn | Chi phí | Thời gian của bạn | Thời gian chờ |
 |---|---|---|---|
-| Pilot: sinh + duyệt + train + đo | < $15 | ~1 tiếng | ~2-3 giờ |
-| Mở rộng (nếu pilot đạt) | ~$40 | ~3 tiếng | ~1 ngày |
+| Pilot: sinh + duyệt + train + đo | **$2.20-4.40** (trần cứng $4.63) | ~30 phút | ~1-2 giờ |
+| Mở rộng (nếu pilot đạt, cần nạp thêm) | ~$40 | ~3 tiếng | ~1 ngày |
 | Chuyển đổi + xoá PRO | $0 | ~30 phút review | — |
 
 Chi phí vận hành sau khi xong: ~$0.010-0.015/ảnh so với ~$0.04 hiện tại. Ở mức 500-5.000 lượt/tháng, tiết kiệm khoảng **$15-150/tháng**.
