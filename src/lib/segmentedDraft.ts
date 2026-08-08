@@ -146,3 +146,8 @@ export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buff
         .png({ compressionLevel: 9 })
         .toBuffer();
 }
+
+// The one instruction the LoRA is trained on and served with. Training and inference MUST pass
+// byte-identical text: a LoRA is keyed to its trigger phrase, and a mismatch silently produces
+// base-model output with no error at all.
+export const KONTEXT_PROMPT_INSTRUCTION = 'assemble into a finished wristwatch product photo';
