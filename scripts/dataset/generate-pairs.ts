@@ -2,6 +2,8 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { buildDraftComposite } from '../../src/lib/draftComposite';
+import { splitStrapSegments } from '../../src/lib/strapSegments';
+import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfile';
@@ -160,7 +162,13 @@ async function main() {
             getObjectBuffer(combo.faceKey),
         ]);
 
-        const draft = await buildDraftComposite(strapBuffer, faceBuffer);
+        // Preferred path: split the clean render into its two segments and re-lay them as a real
+        // watch reads — buckle above, case between, holes below. Falls back to the flat composite
+        // only when the two segments cannot be told apart.
+        const segments = await splitStrapSegments(strapBuffer);
+        const draft = segments
+            ? await buildSegmentedDraft(segments, faceBuffer)
+            : await buildDraftComposite(strapBuffer, faceBuffer);
         await writeFile(path.join(PAIR_DIR, `${combo.id}_start.png`), draft);
 
         if (dryRun) {
