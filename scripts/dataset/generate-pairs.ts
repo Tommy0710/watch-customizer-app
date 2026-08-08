@@ -41,20 +41,39 @@ async function loadPreparedStrap(productId: number, fallbackUrl: string): Promis
     return Buffer.from(await res.arrayBuffer());
 }
 
+// Mirrors the retry policy in /api/generate: Replicate's safety filter throws a transient E005
+// false positive on ordinary inputs, and its API occasionally returns a bare 5xx that its own
+// docs say to retry. 4xx is never retried — an identical request would just fail again.
+async function runWithRetry(input: Record<string, unknown>, attempts = 3): Promise<unknown> {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await replicate.run('black-forest-labs/flux-2-pro', { input });
+        } catch (err: unknown) {
+            const message = String((err as { message?: string })?.message ?? err);
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            const retryable =
+                message.includes('E005') ||
+                message.toLowerCase().includes('flagged as sensitive') ||
+                (typeof status === 'number' && status >= 500);
+            if (!retryable || attempt >= attempts) throw err;
+            console.warn(`    ⚠️ attempt ${attempt} failed (${message.slice(0, 60)}) — retrying`);
+            await new Promise((r) => setTimeout(r, 2000 * attempt));
+        }
+    }
+}
+
 async function runPro(draft: Buffer, strapRef: Buffer, faceRef: Buffer, clause: string, resolution: string) {
     const toUri = (b: Buffer) => `data:image/png;base64,${b.toString('base64')}`;
-    const output: unknown = await replicate.run('black-forest-labs/flux-2-pro', {
-        input: {
-            seed: 19826,
-            prompt: PRO_ASSEMBLY_PROMPT + clause,
-            resolution,
-            aspect_ratio: '9:16',
-            input_images: [toUri(draft), toUri(strapRef), toUri(faceRef)],
-            output_format: 'webp',
-            output_quality: 90,
-            safety_tolerance: 5,
-            prompt_upsampling: false,
-        },
+    const output = await runWithRetry({
+        seed: 19826,
+        prompt: PRO_ASSEMBLY_PROMPT + clause,
+        resolution,
+        aspect_ratio: '9:16',
+        input_images: [toUri(draft), toUri(strapRef), toUri(faceRef)],
+        output_format: 'webp',
+        output_quality: 90,
+        safety_tolerance: 5,
+        prompt_upsampling: false,
     });
     const url = typeof output === 'string' ? output : (output as { url: () => string }).url();
     const res = await fetch(String(url));
