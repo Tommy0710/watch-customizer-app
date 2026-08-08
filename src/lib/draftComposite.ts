@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { removeWhiteBackground } from './removeWhiteBackground';
 
 // Renders the single normalized input image the Kontext LoRA is trained and served on.
 // This module is the ONE place the draft's geometry is defined: the dataset scripts and the
@@ -73,8 +74,17 @@ function clamp(value: number, min: number, max: number): number {
 // PNG, not JPEG: JPEG chroma subsampling visibly degrades fine repeating strap patterns, which is
 // exactly the detail the model has to copy. Same reasoning as the production pipeline.
 export async function buildDraftComposite(strapBuffer: Buffer, faceBuffer: Buffer): Promise<Buffer> {
+    // Prepare the face before measuring it. Library photos carry a wide white margin around the
+    // watch head; leaving it in makes FACE_TO_STRAP_WIDTH_RATIO size the MARGIN rather than the
+    // watch, so the head renders far smaller than the ratio implies. Strip the studio background,
+    // then trim the now-transparent border so the measured width is the watch itself.
+    const preparedFace = await sharp(await removeWhiteBackground(faceBuffer))
+        .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
+        .png()
+        .toBuffer();
+
     const strapMeta = await sharp(strapBuffer).metadata();
-    const faceMeta = await sharp(faceBuffer).metadata();
+    const faceMeta = await sharp(preparedFace).metadata();
     if (!strapMeta.width || !strapMeta.height) throw new Error('Strap image has no readable dimensions');
     if (!faceMeta.width || !faceMeta.height) throw new Error('Face image has no readable dimensions');
 
@@ -93,9 +103,10 @@ export async function buildDraftComposite(strapBuffer: Buffer, faceBuffer: Buffe
         .png()
         .toBuffer();
 
-    const faceLayer = await sharp(faceBuffer)
+    // Keeps its alpha, so the head sits ON the leather instead of inside a white box — one less
+    // artifact for the model to undo.
+    const faceLayer = await sharp(preparedFace)
         .resize({ width: layout.faceWidth, height: layout.faceHeight, fit: 'fill' })
-        .flatten({ background: '#ffffff' })
         .png()
         .toBuffer();
 
