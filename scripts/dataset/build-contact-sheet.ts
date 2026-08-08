@@ -22,12 +22,15 @@ async function main() {
     const { train }: { train: Combo[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
     const productById = new Map(train.map((c) => [c.id, c.productId]));
 
-    // Carry over any earlier verdicts so a re-run does not throw away work already done.
+    // Carry over only the KEEP verdicts. Marking everything absent from approved.json as DROP
+    // would silently reject every pair generated since that file was written — an approved list
+    // says which pairs passed, not which ones were looked at. Anything not explicitly kept starts
+    // undecided so it still gets reviewed.
     let preset: Record<string, boolean> = {};
     if (await exists(path.join(OUT_DIR, 'approved.json'))) {
         const { approved } = JSON.parse(await readFile(path.join(OUT_DIR, 'approved.json'), 'utf8')) as { approved: string[] };
         const approvedSet = new Set(approved);
-        preset = Object.fromEntries(manifest.map((m) => [m.id, approvedSet.has(m.id)]));
+        preset = Object.fromEntries(manifest.filter((m) => approvedSet.has(m.id)).map((m) => [m.id, true]));
     }
 
     const items = manifest.map((m) => ({ ...m, productId: productById.get(m.id) ?? 0 }));
@@ -53,7 +56,8 @@ async function main() {
 <header>
   <kbd>J</kbd> keep &nbsp; <kbd>K</kbd> drop &nbsp; <kbd>↑</kbd><kbd>↓</kbd> move &nbsp;
   <button id="save">Download approved.json</button>
-  <button id="keepall">Keep all</button>
+  <button id="keepall">Keep all remaining</button>
+  <button id="next">Jump to next undecided</button>
   <span id="count"></span>
   <div class="hint">
     Drop the pair if the <b>PRO result</b> shows any of: dial redrawn instead of copied ·
@@ -90,7 +94,8 @@ function render() {
   });
   const kept = [...state.values()].filter(v => v === true).length;
   const seen = [...state.values()].filter(v => v !== null).length;
-  document.getElementById('count').textContent = \` — keeping \${kept}, decided \${seen}/\${ITEMS.length}\`;
+  document.getElementById('count').textContent =
+    \` — keeping \${kept}, dropped \${seen - kept}, undecided \${ITEMS.length - seen}\`;
   document.getElementById('p' + cursor)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
@@ -109,7 +114,15 @@ addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-document.getElementById('keepall').onclick = () => { ITEMS.forEach(i => state.set(i.id, true)); render(); };
+document.getElementById('keepall').onclick = () => {
+  ITEMS.forEach(i => { if (state.get(i.id) === null) state.set(i.id, true); });
+  render();
+};
+
+document.getElementById('next').onclick = () => {
+  const i = ITEMS.findIndex(it => state.get(it.id) === null);
+  if (i >= 0) { cursor = i; render(); }
+};
 
 document.getElementById('save').onclick = () => {
   const approved = ITEMS.filter(i => state.get(i.id) === true).map(i => i.id);
