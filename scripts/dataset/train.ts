@@ -26,10 +26,18 @@ async function main() {
     console.log(`💬 "${KONTEXT_PROMPT_INSTRUCTION}"`);
     console.log('\n⚠️  This is the single training run the budget allows.\n');
 
+    // Upload the zip first and pass its URL. Handing the trainer an inline File makes Replicate
+    // answer the create-training call with a bare 500 ("An unexpected error ocurred"), repeatably.
+    const uploaded = await replicate.files.create(
+        new File([new Uint8Array(zip)], 'dataset.zip', { type: 'application/zip' }),
+    );
+    const zipUrl = uploaded.urls.get;
+    console.log(`⬆️  uploaded → ${zipUrl}`);
+
     const training = await replicate.trainings.create(TRAINER_OWNER, TRAINER_NAME, TRAINER_VERSION, {
         destination: DESTINATION as `${string}/${string}`,
         input: {
-            input_images: new File([new Uint8Array(zip)], 'dataset.zip', { type: 'application/zip' }),
+            input_images: zipUrl,
             training_steps: steps,
             seed: 19826,
             kontext_prompt_instruction: KONTEXT_PROMPT_INSTRUCTION,

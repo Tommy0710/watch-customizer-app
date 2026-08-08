@@ -223,3 +223,79 @@ Hậu quả quan sát được trên 3 ảnh draft đầu tiên: mặt đồng h
 | Chuyển đổi + xoá PRO | $0 | ~30 phút review | — |
 
 Chi phí vận hành sau khi xong: ~$0.010-0.015/ảnh so với ~$0.04 hiện tại. Ở mức 500-5.000 lượt/tháng, tiết kiệm khoảng **$15-150/tháng**.
+
+---
+
+## Pilot result (2026-08-08)
+
+**Status: blocked at training. Dataset complete, Replicate's Kontext trainer is down.**
+
+### Spend
+
+| Item | Cost |
+|---|---|
+| 21 clean strap renders (PRO, 1 MP) | $0.63 |
+| 25 training pairs incl. 3 discarded iterations (PRO, 1 MP) | $0.99 |
+| 5 held-out baselines (PRO, 2 MP) | $0.30 |
+| Training | $0 — could not start |
+| **Total** | **$1.92 of $4.63** |
+
+Roughly $2.71 of budget remains, and the trained model is the only thing still missing.
+
+### The blocker
+
+`replicate/fast-flux-kontext-trainer` (version `26c877b4…`, the current latest) answers **every**
+create-training request with `500 {"detail":"An unexpected error ocurred"}` — including a request
+carrying an empty input object, which should be rejected as a 422.
+
+Confirmed it is specific to that model, not the account and not the request:
+
+- Same account, same destination, `ostris/flux-dev-lora-trainer` with an empty input → **201 Created**
+  (cancelled immediately, no compute billed)
+- Dataset zip uploads fine and is reachable at a Replicate file URL
+- Destination model `tommy0710/watch-lora` exists, is private, and is readable
+- Retried across roughly 40 minutes with inline-file and uploaded-URL variants — 500 every time
+
+No alternative Kontext LoRA trainer exists on Replicate: `flux-2-dev-lora`, `flux-3-lora`, and
+every plausible community trainer name return 404, and `flux-2-dev` still exposes no `lora_weights`
+input. `black-forest-labs/flux-3` is a video model, not a route around this.
+
+### What the pilot did establish
+
+The pipeline works end to end, and three design assumptions in this spec turned out to be wrong in
+ways worth recording:
+
+1. **Catalog photos are not clean strap crops.** 30 of 30 sampled products are staged squares with
+   the strap lying diagonally on a prop. Risk R3 was estimated at ~10% of the catalog; it is
+   effectively 100%.
+2. **A bounding box is not enough.** Cropping to the strap still left it diagonal, on a prop, with
+   the watch head placed relative to the photo frame rather than the lugs.
+3. **Layout matters more than cleanliness.** Rendering a clean studio strap made the input tidy but
+   kept the two segments side by side, and the model copied that faithfully — returning parallel
+   strips with a watch resting on them, or no case at all. Re-laying the segments vertically
+   (buckle, case, tail) is what finally made the draft read as a watch, and shrank the edit to
+   learn down to the lug blend.
+
+Two automatic quality gates were built and paid for themselves:
+
+- **Colour drift check** (`src/lib/strapColour.ts`) — PRO re-renders a strap's colour incorrectly a
+  meaningful fraction of the time. It caught a navy strap rendered plain brown (hue shifted 155°)
+  and excluded it; 20 of 21 renders passed.
+- **Manual curation** — 19 of 22 generated pairs were kept. All three rejects came from renders
+  whose segments could not be separated, so the draft fell back to the side-by-side layout.
+
+### Assets that survive the blocker
+
+- `scripts/dataset/out/dataset.zip` — 19 curated pairs, packed in the trainer's format, already
+  uploaded to Replicate
+- 21 cropped catalog straps and 21 clean studio renders, reusable for any future training run
+- 5 held-out PRO baselines at production settings, never trained on
+- 43 passing unit tests over the draft geometry, colour check, background removal, spend guard,
+  and combo sampling
+
+### Next step
+
+Retry `train.ts` unchanged once Replicate restores the trainer — nothing else needs to be rebuilt.
+If it stays down, the alternatives are training the same zip on another host, or waiting for
+Replicate to expose `lora_weights` on `flux-2-dev`, which would additionally restore the
+multi-image conditioning the production pipeline relies on today.
