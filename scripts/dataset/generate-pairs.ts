@@ -30,15 +30,32 @@ async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
 }
 
+// Prefers the clean studio render (vertical, isolated, white background) over the cropped catalog
+// photo. That choice is what keeps the before/after difference down to "attach the watch head"
+// instead of "reorient the strap, erase the props, and attach the watch head".
 async function loadPreparedStrap(productId: number, fallbackUrl: string): Promise<Buffer> {
-    const prepared = path.join(OUT_DIR, 'straps', `${productId}.png`);
-    if (await exists(prepared)) return readFile(prepared);
-    // prepare-straps.ts writes a file for every product, including ones detection could not crop,
-    // so a miss here means it simply has not been run for this combo yet.
+    const clean = path.join(OUT_DIR, 'straps-clean', `${productId}.webp`);
+    if (await exists(clean)) return readFile(clean);
+
+    const cropped = path.join(OUT_DIR, 'straps', `${productId}.png`);
+    if (await exists(cropped)) {
+        console.warn(`  ⚠️ no clean render for product ${productId} — falling back to the cropped photo`);
+        return readFile(cropped);
+    }
+
     console.warn(`  ⚠️ no prepared strap for product ${productId} — run prepare-straps.ts first; using the raw photo`);
     const res = await fetch(fallbackUrl);
     if (!res.ok) throw new Error(`Could not download strap image ${fallbackUrl} (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
+}
+
+// Products whose clean render drifted in colour are excluded outright — a brown-ified navy strap
+// in a two-dozen-pair set would teach the LoRA that straps are brown. See check-clean-straps.ts.
+async function loadAcceptedProducts(): Promise<Set<number> | null> {
+    const checkPath = path.join(OUT_DIR, 'clean-straps-check.json');
+    if (!(await exists(checkPath))) return null;
+    const { accepted } = JSON.parse(await readFile(checkPath, 'utf8')) as { accepted: number[] };
+    return new Set(accepted);
 }
 
 // Mirrors the retry policy in /api/generate: Replicate's safety filter throws a transient E005
@@ -108,10 +125,16 @@ async function main() {
         `, ${done.size} already done, limit ${limit} this run`,
     );
 
+    const accepted = await loadAcceptedProducts();
     let generatedThisRun = 0;
+    let skippedForColour = 0;
 
     for (const combo of combos) {
         if (done.has(combo.id)) continue;
+        if (accepted && !accepted.has(combo.productId)) {
+            skippedForColour++;
+            continue;
+        }
         if (generatedThisRun >= limit) {
             console.log(`\n⏸  Reached --limit=${limit} for this run.`);
             break;
@@ -169,7 +192,10 @@ async function main() {
         console.log(`  ✅ ${combo.id}  (${guard.summary()})`);
     }
 
-    console.log(`\n${guard.summary()} — ${manifest.length}/${combos.length} pairs on disk`);
+    if (skippedForColour > 0) {
+        console.log(`\nℹ️  skipped ${skippedForColour} combo(s) whose clean strap render drifted in colour`);
+    }
+    console.log(`${guard.summary()} — ${manifest.length}/${combos.length} pairs on disk`);
     process.exit(0);
 }
 
