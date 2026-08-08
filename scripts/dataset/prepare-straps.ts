@@ -74,13 +74,16 @@ async function main() {
         }
 
         if (out === raw) {
-            console.warn(`  ⚠️ ${productId} kept uncropped (${combo.productName.slice(0, 40)})`);
+            // Deliberately writes nothing. Saving the uncropped photo would make the next run skip
+            // this product forever, quietly leaving a staged prop shot in the dataset — the exact
+            // failure this step exists to prevent. Leaving the file absent means a re-run retries.
+            console.warn(`  ⚠️ ${productId} detection failed, left for a later run (${combo.productName.slice(0, 40)})`);
             failed++;
         } else {
+            await writeFile(outPath, out);
             cropped++;
             console.log(`  ✅ ${productId} ${combo.productName.slice(0, 46)}`);
         }
-        await writeFile(outPath, out);
         await sleep(delayMs);
     }
 
