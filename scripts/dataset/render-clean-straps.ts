@@ -45,6 +45,20 @@ async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
 }
 
+// The pre-crop is a helper, not a prerequisite. CLEAN_STRAP_PROMPT already instructs PRO to strip
+// the backdrop, hides, and props itself, and three pilot straps that were never cropped still
+// produced renders that passed the colour check and yielded usable pairs. Since the crop depends
+// on a rate-limited free tier that throttles to a few images per minute, waiting on it would cost
+// hours for a step that only makes PRO's job marginally easier.
+async function loadSource(productId: number, catalogUrl: string): Promise<Buffer> {
+    const cropped = path.join(STRAP_DIR, `${productId}.png`);
+    if (await exists(cropped)) return readFile(cropped);
+
+    const res = await fetch(catalogUrl);
+    if (!res.ok) throw new Error(`Could not download catalog photo for ${productId} (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
+}
+
 async function runWithRetry(input: Record<string, unknown>, attempts = 3): Promise<unknown> {
     for (let attempt = 1; ; attempt++) {
         try {
@@ -95,7 +109,7 @@ async function main() {
             throw err;
         }
 
-        const source = await readFile(path.join(STRAP_DIR, `${productId}.png`));
+        const source = await loadSource(productId, combo.strapImage);
         const output = await runWithRetry({
             seed: 19826,
             prompt: CLEAN_STRAP_PROMPT,
