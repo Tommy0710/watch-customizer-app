@@ -6,6 +6,7 @@ import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import { TRIGGER_WORD } from './styleDataset';
+import { loadReversedProducts, applyReversal } from './strapOverrides';
 import type { Combo } from './selectCombos';
 
 // Runs the trained style LoRA over combos it has never seen and puts its output next to PRO's on
@@ -40,6 +41,7 @@ function firstOutputUrl(out: unknown): string {
 async function main() {
     const strength = Number(arg('strength', '0.35'));
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.40')), label: 'eval-style' });
+    const reversedProducts = await loadReversedProducts();
 
     // Load by the direct weights URL, not by "owner/name:version". The destination model is
     // private, and flux-dev-lora fetches a named model over public HTTP — it cannot authenticate,
@@ -64,7 +66,8 @@ async function main() {
             throw err;
         }
 
-        const segments = await splitStrapSegments(await readFile(cleanPath));
+        const rawSegments = await splitStrapSegments(await readFile(cleanPath));
+        const segments = rawSegments && applyReversal(rawSegments, combo.productId, reversedProducts);
         if (!segments) { console.warn(`  ⚠️ ${combo.id}: could not split segments`); continue; }
 
         const { buffer: face } = await getObjectBuffer(combo.faceKey);

@@ -7,6 +7,7 @@ import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import { TRIGGER_WORD } from './styleDataset';
+import { loadReversedProducts, applyReversal } from './strapOverrides';
 import type { Combo } from './selectCombos';
 
 // prompt_strength is the one knob that decides whether this approach works at all. Too low and the
@@ -39,6 +40,7 @@ function firstOutputUrl(out: unknown): string {
 
 async function main() {
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.30')), label: 'sweep' });
+    const reversedProducts = await loadReversedProducts();
     const STRENGTHS = arg('strengths', '').trim()
         ? arg('strengths', '').split(',').map(Number)
         : DEFAULT_STRENGTHS;
@@ -53,7 +55,8 @@ async function main() {
     const { heldOut }: { heldOut: Combo[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
     const combo = heldOut[0];
 
-    const segments = await splitStrapSegments(await readFile(path.join(OUT_DIR, 'straps-clean', `${combo.productId}.webp`)));
+    const rawSegments = await splitStrapSegments(await readFile(path.join(OUT_DIR, 'straps-clean', `${combo.productId}.webp`)));
+    const segments = rawSegments && applyReversal(rawSegments, combo.productId, reversedProducts);
     if (!segments) throw new Error(`could not split segments for ${combo.productId}`);
     const { buffer: face } = await getObjectBuffer(combo.faceKey);
     const draft = await buildSegmentedDraft(segments, face);

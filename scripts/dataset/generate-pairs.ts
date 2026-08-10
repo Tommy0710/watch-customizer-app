@@ -8,6 +8,7 @@ import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfile';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
+import { loadReversedProducts, applyReversal } from './strapOverrides';
 import type { Combo } from './selectCombos';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
@@ -109,6 +110,7 @@ async function main() {
     const maxSpend = Number(arg('max-spend', '1.50'));
 
     const guard = createSpendGuard({ maxSpend, label: `generate-pairs:${set}` });
+    const reversedProducts = await loadReversedProducts();
 
     const combos: Combo[] = JSON.parse(
         await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'),
@@ -165,7 +167,8 @@ async function main() {
         // Preferred path: split the clean render into its two segments and re-lay them as a real
         // watch reads — buckle above, case between, holes below. Falls back to the flat composite
         // only when the two segments cannot be told apart.
-        const segments = await splitStrapSegments(strapBuffer);
+        const rawSegments = await splitStrapSegments(strapBuffer);
+        const segments = rawSegments && applyReversal(rawSegments, combo.productId, reversedProducts);
         const draft = segments
             ? await buildSegmentedDraft(segments, faceBuffer)
             : await buildDraftComposite(strapBuffer, faceBuffer);
