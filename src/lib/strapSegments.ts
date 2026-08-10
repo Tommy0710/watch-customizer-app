@@ -65,8 +65,9 @@ export function findGutter(density: number[], width: number): { start: number; e
 }
 
 // The buckle is a large bright, near-colourless metal object. Whichever half carries more of that
-// in its upper region is the buckle segment.
-async function metalScore(image: Buffer): Promise<number> {
+// is the buckle segment. Exported so the render gate can spot a strap that came back with a buckle
+// on BOTH halves — a real strap has exactly one.
+export async function metalScore(image: Buffer): Promise<number> {
     const { data, info } = await sharp(image)
         .resize({ width: 120, height: 300, fit: 'inside' })
         .removeAlpha()
@@ -112,4 +113,22 @@ export async function splitStrapSegments(image: Buffer): Promise<SplitStrap | nu
 
     const [leftMetal, rightMetal] = await Promise.all([metalScore(left), metalScore(right)]);
     return leftMetal >= rightMetal ? { buckle: left, tail: right } : { buckle: right, tail: left };
+}
+
+// A strap has one buckle, but PRO sometimes re-renders one onto BOTH segments and the spare then
+// dangles off the bottom of the assembled draft. This scores how lopsided the metal is between the
+// halves: a clean render is lopsided (one buckle), a doubled one is even.
+//
+// RANKING SIGNAL ONLY — never an automatic reject. metalScore counts low-saturation bright pixels,
+// which a pale grey or white strap trips across its whole surface: measured on 86 real renders,
+// one scored 0.999 on both halves purely from its colour. The known doubled render scores 1.25 and
+// a known-good one 2.87, but the p10 of all renders is 1.12, so a threshold that catches the real
+// fault also condemns straps whose only crime is being pale. Use it to put the most suspicious
+// renders first in the review queue and let a human decide.
+export async function buckleAsymmetry(segments: SplitStrap): Promise<number> {
+    const [buckleScore, tailScore] = await Promise.all([
+        metalScore(segments.buckle),
+        metalScore(segments.tail),
+    ]);
+    return tailScore > 0 ? buckleScore / tailScore : Infinity;
 }
