@@ -17,7 +17,7 @@ import type { Combo } from './selectCombos';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const SWEEP_DIR = path.join(OUT_DIR, 'sweep');
-const STRENGTHS = [0.25, 0.35, 0.45, 0.55];
+const DEFAULT_STRENGTHS = [0.25, 0.35, 0.45, 0.55];
 const ASSUMED_COST = 0.04;
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
@@ -39,6 +39,10 @@ function firstOutputUrl(out: unknown): string {
 
 async function main() {
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.30')), label: 'sweep' });
+    const STRENGTHS = arg('strengths', '').trim()
+        ? arg('strengths', '').split(',').map(Number)
+        : DEFAULT_STRENGTHS;
+    const tag = arg('tag', '');
     const { destination, output } = JSON.parse(await readFile(path.join(OUT_DIR, 'training.json'), 'utf8'));
     // Load by the direct weights URL, not by "owner/name:version". The destination model is
     // private, and flux-dev-lora fetches a named model over public HTTP — it cannot authenticate,
@@ -86,7 +90,7 @@ async function main() {
             },
         });
 
-        const file = path.join(SWEEP_DIR, `s${String(strength).replace('.', '')}.webp`);
+        const file = path.join(SWEEP_DIR, `s${String(strength).replace('.', '')}${tag}.webp`);
         await writeFile(file, Buffer.from(await (await fetch(firstOutputUrl(out))).arrayBuffer()));
         results.push({ strength, file });
         console.log(`  ✅ strength ${strength}  (${guard.summary()})`);
@@ -106,10 +110,10 @@ async function main() {
         });
     }
     await sharp({ create: { width: W * panels.length, height: H + LABEL, channels: 3, background: { r: 255, g: 255, b: 255 } } })
-        .composite(tiles).jpeg({ quality: 92 }).toFile(path.join(OUT_DIR, 'sweep.jpg'));
+        .composite(tiles).jpeg({ quality: 92 }).toFile(path.join(OUT_DIR, `sweep${tag}.jpg`));
 
     console.log(`\n${guard.summary()}`);
-    console.log(`   → scripts/dataset/out/sweep.jpg`);
+    console.log(`   → scripts/dataset/out/sweep${tag}.jpg`);
     process.exit(0);
 }
 
