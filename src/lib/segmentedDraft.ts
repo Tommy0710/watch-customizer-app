@@ -82,38 +82,18 @@ export function computeSegmentedLayout(input: {
     };
 }
 
-// Scales a segment to the target width, then crops it to the target height keeping the end that
-// stays visible: the buckle end for the upper segment, the tip end for the lower one. The cut end
-// is the one that meets the case.
-async function fitSegment(
-    segment: Buffer,
-    width: number,
-    height: number,
-    keep: 'top' | 'bottom',
-): Promise<Buffer> {
-    const scaled = await sharp(segment).resize({ width }).png().toBuffer();
-    const meta = await sharp(scaled).metadata();
-    const scaledHeight = meta.height ?? height;
-
-    if (scaledHeight <= height) {
-        // Too short to fill its slot — pad on the cut side so the visible end stays put.
-        return sharp(scaled)
-            .extend({
-                top: keep === 'bottom' ? height - scaledHeight : 0,
-                bottom: keep === 'top' ? height - scaledHeight : 0,
-                background: { r: 255, g: 255, b: 255, alpha: 0 },
-            })
-            .png()
-            .toBuffer();
-    }
-
-    return sharp(scaled)
-        .extract({
-            left: 0,
-            top: keep === 'top' ? 0 : scaledHeight - height,
-            width: meta.width ?? width,
-            height,
-        })
+// Fits a segment into its slot by SCALING it, never by cropping.
+//
+// Cropping is what the first version did, and it cut off exactly the wrong thing. Each segment has
+// a spring-bar end — the articulated end that pins into the watch case — and a far end that is the
+// buckle on the short piece or the curved tip on the long piece. The slot is much shorter than the
+// full segment, so trimming to length amputated the spring-bar end and left a raw cut across the
+// middle of the leather butting against the case. Both ends carry the product's real shape, so
+// both have to survive; a little lengthwise foreshortening is a far smaller lie than a strap with
+// no visible connection to the watch.
+async function fitSegment(segment: Buffer, width: number, height: number): Promise<Buffer> {
+    return sharp(segment)
+        .resize({ width, height, fit: 'fill' })
         .png()
         .toBuffer();
 }
@@ -134,8 +114,8 @@ export async function buildSegmentedDraft(
     const layout = computeSegmentedLayout({ caseAspect: faceMeta.height / faceMeta.width, buckleLengthRatio });
 
     const [buckleLayer, tailLayer, caseLayer] = await Promise.all([
-        fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight, 'top'),
-        fitSegment(segments.tail, layout.segmentWidth, layout.tailHeight, 'bottom'),
+        fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight),
+        fitSegment(segments.tail, layout.segmentWidth, layout.tailHeight),
         sharp(preparedFace)
             .resize({ width: layout.caseWidth, height: layout.caseHeight, fit: 'fill' })
             .png()
