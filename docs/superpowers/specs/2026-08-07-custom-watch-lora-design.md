@@ -299,3 +299,54 @@ Retry `train.ts` unchanged once Replicate restores the trainer — nothing else 
 If it stays down, the alternatives are training the same zip on another host, or waiting for
 Replicate to expose `lora_weights` on `flux-2-dev`, which would additionally restore the
 multi-image conditioning the production pipeline relies on today.
+
+---
+
+## Pilot result, round two (2026-08-10): PASS
+
+The Kontext path stayed dead — `replicate/fast-flux-kontext-trainer` returns 500 on **all eight**
+published versions, verified with a valid destination and live credit, while `ostris/flux-dev-lora-trainer`
+accepts trainings from the same account. It is a Replicate-side fault, not credit and not our
+request. No alternative pair-based trainer exists on Replicate.
+
+### What changed
+
+Every trainer still working on Replicate learns from single captioned images, so the target moved:
+
+| | Original design | Shipped |
+|---|---|---|
+| What is learned | "turn this draft into an assembled watch" | "what a correctly assembled HANDDN watch looks like" |
+| Training data | 44 before/after pairs | the same 44 "after" images, captioned |
+| At inference | Kontext edit | `flux-dev-lora` img2img starting from the draft |
+
+The draft still carries the customer's real strap colour, grain, and the 36% buckle layout; a low
+`prompt_strength` preserves them while the LoRA supplies realism.
+
+### Result against the criteria fixed in advance
+
+Six held-out combos, never trained on. `tommy0710/watch-lora`, 1000 steps, trigger `HNDDNW`.
+
+| Criterion | Target | Measured |
+|---|---|---|
+| Catastrophic failures | ≤ 1/6 | **0/6** |
+| LoRA ≥ PRO on assembly | ≥ 4/6 | **4 better, 1 comparable, 1 no baseline** |
+| Strap colour and grain preserved | ≥ 5/6 | **6/6** |
+| Mean latency incl. cold start | < 15 s | **11.8 s @ 0.35, 6.3 s @ 0.45** |
+
+**All four pass.** The LoRA beat PRO on the cases PRO has always struggled with: it kept the
+duocolor red/green stripe PRO flattened to plain red, kept the python grain and white background
+PRO drifted away from, kept the gold buckle PRO restyled, and produced a correctly assembled watch
+on the combo where PRO shrank the case to a speck.
+
+### Caveats
+
+- Six samples is too small for statistical confidence. It is enough to rule out gross failure, not
+  enough to predict the tail.
+- 0.35 and 0.45 differ only subtly; 0.45 reads slightly crisper, 0.35 is safer for dial fidelity.
+- Grain fidelity is still bounded upstream by the clean-render step, not by the LoRA — the LoRA
+  faithfully reproduces whatever grain reaches it. `src/lib/strapTexture.ts` measures this but is
+  deliberately not wired as a gate: on real data its normal band overlaps the one known failure.
+
+### Spend
+
+Roughly $1 to train and $0.64 across the sweep and both evaluation passes.
