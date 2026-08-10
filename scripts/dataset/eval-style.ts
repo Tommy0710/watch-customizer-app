@@ -27,12 +27,26 @@ async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
 }
 
+// flux-dev-lora returns an ARRAY of outputs (num_outputs defaults to 1), unlike flux-2-pro which
+// returns a single value — hence "out.url is not a function" on the first run.
+function firstOutputUrl(out: unknown): string {
+    const item = Array.isArray(out) ? out[0] : out;
+    if (typeof item === 'string') return item;
+    const withUrl = item as { url?: () => string } | null;
+    if (withUrl && typeof withUrl.url === 'function') return String(withUrl.url());
+    throw new Error(`Unexpected model output shape: ${JSON.stringify(out).slice(0, 120)}`);
+}
+
 async function main() {
     const strength = Number(arg('strength', '0.35'));
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.40')), label: 'eval-style' });
 
+    // Load by the direct weights URL, not by "owner/name:version". The destination model is
+    // private, and flux-dev-lora fetches a named model over public HTTP — it cannot authenticate,
+    // so that path fails with "Failed to download tarball". The tarball URL works regardless.
     const { destination, output } = JSON.parse(await readFile(path.join(OUT_DIR, 'training.json'), 'utf8'));
-    const loraWeights = (output as { version?: string })?.version ?? destination;
+    const trained = output as { version?: string; weights?: string } | null;
+    const loraWeights = trained?.weights ?? trained?.version ?? destination;
 
     const { heldOut }: { heldOut: Combo[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
     await mkdir(EVAL_DIR, { recursive: true });
@@ -79,9 +93,8 @@ async function main() {
         });
         const seconds = (Date.now() - startedAt) / 1000;
 
-        const url = typeof out === 'string' ? out : (out as { url: () => string }).url();
         await writeFile(path.join(EVAL_DIR, `${combo.id}_lora.webp`),
-            Buffer.from(await (await fetch(String(url))).arrayBuffer()));
+            Buffer.from(await (await fetch(firstOutputUrl(out))).arrayBuffer()));
 
         rows.push({
             id: combo.id,

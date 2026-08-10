@@ -27,12 +27,24 @@ function arg(name: string, fallback: string): string {
     return hit ? hit.slice(name.length + 3) : fallback;
 }
 
+// flux-dev-lora returns an ARRAY of outputs (num_outputs defaults to 1), unlike flux-2-pro which
+// returns a single value — hence "out.url is not a function" on the first run.
+function firstOutputUrl(out: unknown): string {
+    const item = Array.isArray(out) ? out[0] : out;
+    if (typeof item === 'string') return item;
+    const withUrl = item as { url?: () => string } | null;
+    if (withUrl && typeof withUrl.url === 'function') return String(withUrl.url());
+    throw new Error(`Unexpected model output shape: ${JSON.stringify(out).slice(0, 120)}`);
+}
+
 async function main() {
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.30')), label: 'sweep' });
     const { destination, output } = JSON.parse(await readFile(path.join(OUT_DIR, 'training.json'), 'utf8'));
-    // ostris publishes the trained LoRA as a new version of the destination model, so inference
-    // loads it by "owner/name" rather than by a weights URL.
-    const loraWeights = (output as { version?: string })?.version ?? destination;
+    // Load by the direct weights URL, not by "owner/name:version". The destination model is
+    // private, and flux-dev-lora fetches a named model over public HTTP — it cannot authenticate,
+    // so that path fails with "Failed to download tarball". The tarball URL works regardless.
+    const trained = output as { version?: string; weights?: string } | null;
+    const loraWeights = trained?.weights ?? trained?.version ?? destination;
 
     const { heldOut }: { heldOut: Combo[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
     const combo = heldOut[0];
@@ -74,9 +86,8 @@ async function main() {
             },
         });
 
-        const url = typeof out === 'string' ? out : (out as { url: () => string }).url();
         const file = path.join(SWEEP_DIR, `s${String(strength).replace('.', '')}.webp`);
-        await writeFile(file, Buffer.from(await (await fetch(String(url))).arrayBuffer()));
+        await writeFile(file, Buffer.from(await (await fetch(firstOutputUrl(out))).arrayBuffer()));
         results.push({ strength, file });
         console.log(`  ✅ strength ${strength}  (${guard.summary()})`);
     }
