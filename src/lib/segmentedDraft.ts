@@ -40,7 +40,9 @@ export type SegmentedDraftLayout = {
 
 export function computeSegmentedLayout(input: {
     caseAspect: number; // height / width of the watch head
+    buckleLengthRatio?: number; // overrides BUCKLE_LENGTH_RATIO, for comparing proportions
 }): SegmentedDraftLayout {
+    const buckleRatio = input.buckleLengthRatio ?? BUCKLE_LENGTH_RATIO;
     const marginY = Math.round(DRAFT_CANVAS_HEIGHT * DRAFT_MARGIN_RATIO);
     const totalStrapHeight = DRAFT_CANVAS_HEIGHT - marginY * 2;
 
@@ -52,7 +54,7 @@ export function computeSegmentedLayout(input: {
     // Leather hidden behind the case is not strap length the viewer sees, so the two visible
     // segment lengths share what is left once the case has taken its place.
     const visibleStrap = totalStrapHeight - (caseHeight - overlap * 2);
-    const buckleHeight = Math.max(1, Math.round(visibleStrap * BUCKLE_LENGTH_RATIO));
+    const buckleHeight = Math.max(1, Math.round(visibleStrap * buckleRatio));
     const tailHeight = Math.max(1, visibleStrap - buckleHeight);
 
     const buckleTop = marginY;
@@ -109,7 +111,11 @@ async function fitSegment(
         .toBuffer();
 }
 
-export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buffer): Promise<Buffer> {
+export async function buildSegmentedDraft(
+    segments: SplitStrap,
+    faceBuffer: Buffer,
+    buckleLengthRatio?: number,
+): Promise<Buffer> {
     const preparedFace = await sharp(await removeWhiteBackground(faceBuffer))
         .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
         .png()
@@ -118,7 +124,7 @@ export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buff
     const faceMeta = await sharp(preparedFace).metadata();
     if (!faceMeta.width || !faceMeta.height) throw new Error('Face image has no readable dimensions');
 
-    const layout = computeSegmentedLayout({ caseAspect: faceMeta.height / faceMeta.width });
+    const layout = computeSegmentedLayout({ caseAspect: faceMeta.height / faceMeta.width, buckleLengthRatio });
 
     const [buckleLayer, tailLayer, caseLayer] = await Promise.all([
         fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight, 'top'),
