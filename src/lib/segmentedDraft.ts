@@ -17,9 +17,16 @@ import type { SplitStrap } from './strapSegments';
 export const CASE_WIDTH_RATIO = 0.30;
 export const SEGMENT_TO_CASE_WIDTH_RATIO = 1 / 1.6;
 
-// The buckle side of a strap is the short side. Same 0.30 the production pipeline settled on
-// after several rounds of tuning against real generations.
-export const BUCKLE_LENGTH_RATIO = 0.30;
+// The buckle side of a strap is the short side. Started at 0.30, matching what the production
+// pipeline settled on, but that read as unbalanced once the segments were laid out vertically —
+// the case sat too high in the frame. Raised to 0.36 on review (2026-08-10): long enough to look
+// composed, still clearly shorter than the tail, which is how a real strap is built.
+//
+// Safe to change after the training pairs were generated at 0.30, because those pairs teach
+// geometry PRESERVATION rather than a fixed proportion: measured across 12 of them, PRO reproduced
+// the draft's own ratio almost exactly (32%→32%, 33%→34%, 35%→35%). Verify it carries through at
+// eval — if outputs snap back toward 30%, the training set would need regenerating at 0.36.
+export const BUCKLE_LENGTH_RATIO = 0.36;
 
 // How far the case overlaps each segment end, as a fraction of case height — the lugs sit on top
 // of the leather rather than merely touching it.
