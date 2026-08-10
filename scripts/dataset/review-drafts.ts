@@ -21,6 +21,7 @@ import type { Combo } from './selectCombos';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const PICK_DIR = path.join(OUT_DIR, 'draft-pick');
 const REVERSED_DIR = path.join(PICK_DIR, 'DAO-NGUOC');
+const NEARLY_DIR = path.join(PICK_DIR, 'GAN-DUNG');
 
 const PANEL_W = 520;
 const PANEL_H = 940;
@@ -39,6 +40,7 @@ async function main() {
 
     await rm(PICK_DIR, { recursive: true, force: true });
     await mkdir(REVERSED_DIR, { recursive: true });
+    await mkdir(NEARLY_DIR, { recursive: true });
 
     let written = 0;
     let unsplittable = 0;
@@ -91,7 +93,7 @@ async function main() {
     console.log(`✅ ${written} assembled drafts → ${PICK_DIR}`);
     if (unsplittable) console.warn(`   ⚠️ ${unsplittable} renders could not be split and were skipped`);
     console.log('   Left = catalog photo, right = the watch the model will be asked to finish.');
-    console.log('   Drag upside-down ones into DAO-NGUOC. Delete ones whose colour or leather is wrong.');
+    console.log('   DAO-NGUOC = upside down · GAN-DUNG = close but not right · delete = wrong colour or leather.');
     process.exit(0);
 }
 

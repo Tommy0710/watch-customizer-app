@@ -1,11 +1,16 @@
 import { readdir, readFile, writeFile, unlink, access } from 'node:fs/promises';
 import path from 'node:path';
 
-// Reads the three verdicts a reviewer can express in the strap-pick folder:
+// Reads the four verdicts a reviewer can express in the review folder:
 //
-//   left in place        → the render is good
-//   dragged to DAO-NGUOC → the render is fine but its two segments are the wrong way round
-//   deleted              → the render is wrong (colour, material, a second buckle) and must go
+//   left in place        → correct
+//   dragged to GAN-DUNG  → close, but something is still off
+//   dragged to DAO-NGUOC → upside down: buckle below the case instead of above it
+//   deleted              → wrong colour or wrong leather; the render has to be redone
+//
+// GAN-DUNG exists because a reviewer working through a batch needs somewhere to put "not quite"
+// without either passing it or condemning it. A pile of near-misses is also the most useful thing
+// to look at when hunting a systematic fault: whatever they share is the bug.
 //
 // Reversed is kept separate from rejected on purpose. A reversed render costs nothing to fix — the
 // buckle and tail halves just need swapping — whereas a rejected one has to be regenerated, which
@@ -13,8 +18,9 @@ import path from 'node:path';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
-const PICK_DIR = path.join(OUT_DIR, 'strap-pick');
+const PICK_DIR = path.join(OUT_DIR, process.argv.includes('--drafts') ? 'draft-pick' : 'strap-pick');
 const REVERSED_DIR = path.join(PICK_DIR, 'DAO-NGUOC');
+const NEARLY_DIR = path.join(PICK_DIR, 'GAN-DUNG');
 
 const idsIn = async (dir: string): Promise<number[]> => {
     try {
@@ -29,8 +35,9 @@ const idsIn = async (dir: string): Promise<number[]> => {
 
 async function main() {
     const reversed = await idsIn(REVERSED_DIR);
+    const nearly = await idsIn(NEARLY_DIR);
     const kept = await idsIn(PICK_DIR);
-    const surviving = new Set([...kept, ...reversed]);
+    const surviving = new Set([...kept, ...reversed, ...nearly]);
 
     if (surviving.size === 0) throw new Error(`${PICK_DIR} is empty — run review-straps.ts first`);
 
@@ -48,10 +55,11 @@ async function main() {
 
     await writeFile(
         path.join(OUT_DIR, 'strap-review.json'),
-        JSON.stringify({ good: kept, reversed, rejected }, null, 2),
+        JSON.stringify({ good: kept, nearly, reversed, rejected }, null, 2),
     );
 
-    console.log(`good ${kept.length} · reversed ${reversed.length} · rejected ${rejected.length}  (of ${renders.length})`);
+    console.log(`good ${kept.length} · nearly ${nearly.length} · reversed ${reversed.length} · rejected ${rejected.length}  (of ${renders.length})`);
+    if (nearly.length) console.log(`   nearly ids: ${nearly.join(', ')}`);
     if (reversed.length) console.log(`   reversed ids: ${reversed.join(', ')} — segments will be swapped when building drafts`);
     if (rejected.length) console.log(`   rejected ids: ${rejected.join(', ')}`);
     console.log(dryRun
