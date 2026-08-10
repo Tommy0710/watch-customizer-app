@@ -51,7 +51,14 @@ export function findGutter(density: number[], width: number): { start: number; e
     }
 
     // If the emptiest middle column still carries real content, this is one wide segment, not two.
-    if (density[minIndex] > 0.25) return null;
+    //
+    // 0.25 was a guess and it was far too tight: renders where the two segments merely touch —
+    // no white gutter, just a seam — measured 0.26 to 0.42 and were rejected outright, which sent
+    // 42 of 96 straps down the fallback path and produced the flat pasted-on drafts. Measured
+    // across all 96 real renders the middle minimum runs from 0.000 to 0.417 with a median of
+    // 0.008, so every genuine two-segment render clears 0.45 while a truly solid strap would sit
+    // far higher.
+    if (density[minIndex] > 0.45) return null;
 
     // Widen outward while the columns stay comparably empty, so the split lands on the whole gap.
     const limit = Math.max(density[minIndex] * 2, 0.03);
