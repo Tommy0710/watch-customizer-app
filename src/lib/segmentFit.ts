@@ -110,3 +110,63 @@ export async function measureSegment(segment: Buffer, springEnd: 'top' | 'bottom
         aspect: img.height / lugWidth,
     };
 }
+
+export type FaceMetrics = {
+    width: number;
+    height: number;
+    lugCentre: number; // x of the axis the strap runs along, within the image
+    lugGap: number | null; // clear width between the lugs — the strap's true width — when readable
+};
+
+// Where the strap actually meets the watch.
+//
+// The head was being centred on its bounding box, and a bounding box is the wrong landmark: a crown
+// and chronograph pushers stick out on one side, which shifts the box without shifting the lugs.
+// Every head with a side crown therefore had its strap running a fifth of a strap width off the lug
+// axis — the misfit a reviewer described as "lệch chưa khớp ghép giữa mặt và dây". Heads with the
+// crown at 12 o'clock were the ones that looked right.
+//
+// The lugs also give the strap its width for free: a strap is cut to the clear gap between them.
+export async function measureFace(face: Buffer): Promise<FaceMetrics> {
+    const { data, info } = await sharp(face).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const band = Math.max(2, Math.round(info.height * 0.05));
+
+    // One end of the head: the two lug prongs read as two runs of ink with the strap's gap between.
+    const readEnd = (from: number, to: number): { centre: number; gap: number | null } | null => {
+        const filled: boolean[] = [];
+        for (let x = 0; x < info.width; x++) {
+            let hits = 0;
+            for (let y = from; y < to; y++) if (data[(y * info.width + x) * info.channels + 3] > 40) hits++;
+            filled.push(hits / (to - from) > 0.3);
+        }
+        const runs: { from: number; to: number }[] = [];
+        for (let x = 0; x < filled.length; x++) {
+            if (!filled[x]) continue;
+            const start = x;
+            while (x < filled.length && filled[x]) x++;
+            if (x - start > info.width * 0.02) runs.push({ from: start, to: x });
+        }
+        if (runs.length === 0) return null;
+        if (runs.length === 1) return { centre: (runs[0].from + runs[0].to) / 2, gap: null };
+        // More than two runs means decoration got in the way; the outermost two are still the lugs.
+        const left = runs[0];
+        const right = runs[runs.length - 1];
+        return { centre: (left.to + right.from) / 2, gap: right.from - left.to };
+    };
+
+    const ends = [readEnd(0, band), readEnd(info.height - band, info.height)].filter(Boolean) as {
+        centre: number;
+        gap: number | null;
+    }[];
+    if (ends.length === 0) {
+        return { width: info.width, height: info.height, lugCentre: info.width / 2, lugGap: null };
+    }
+
+    const gaps = ends.map((e) => e.gap).filter((g): g is number => g !== null && g > info.width * 0.15);
+    return {
+        width: info.width,
+        height: info.height,
+        lugCentre: ends.reduce((sum, e) => sum + e.centre, 0) / ends.length,
+        lugGap: gaps.length ? gaps.reduce((sum, g) => sum + g, 0) / gaps.length : null,
+    };
+}

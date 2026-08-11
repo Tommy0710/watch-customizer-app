@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { trimSpringBarPins, measureSegment } from '@/lib/segmentFit';
+import { trimSpringBarPins, measureSegment, measureFace } from '@/lib/segmentFit';
 import { computeSegmentedLayout } from '@/lib/segmentedDraft';
 
 const W = 160;
@@ -105,5 +105,41 @@ describe('measureSegment', () => {
     const m = await measureSegment(withBuckle, 'bottom');
     expect(m.lugWidth).toBeLessThan(m.width * 0.8);
     expect(m.lugWidth / width).toBeCloseTo(1, 1);
+  });
+});
+
+describe('measureFace', () => {
+  // A watch head: a round case with two lug prongs at each end, and a crown sticking out on the
+  // right so the bounding box is not centred on the lugs.
+  async function head(opts: { crown: boolean }): Promise<Buffer> {
+    const S = 400;
+    const lug = `<rect x="120" y="0" width="40" height="60" fill="#333"/><rect x="240" y="0" width="40" height="60" fill="#333"/>`;
+    const lugBottom = `<rect x="120" y="340" width="40" height="60" fill="#333"/><rect x="240" y="340" width="40" height="60" fill="#333"/>`;
+    const crown = opts.crown ? `<rect x="330" y="185" width="60" height="30" fill="#555"/>` : '';
+    return sharp(Buffer.from(
+      `<svg width="${S}" height="${S}"><circle cx="200" cy="200" r="140" fill="#222"/>${lug}${lugBottom}${crown}</svg>`,
+    ))
+      .png()
+      .toBuffer();
+  }
+
+  it('finds the lug axis, not the middle of the bounding box', async () => {
+    const trimmed = await sharp(await head({ crown: true })).trim().png().toBuffer();
+    const m = await measureFace(trimmed);
+    // The crown pushes the box right, so the lug axis has to come out left of the box centre.
+    expect(m.lugCentre).toBeLessThan(m.width / 2 - m.width * 0.02);
+  });
+
+  it('agrees with the box centre when nothing sticks out', async () => {
+    const trimmed = await sharp(await head({ crown: false })).trim().png().toBuffer();
+    const m = await measureFace(trimmed);
+    expect(m.lugCentre).toBeCloseTo(m.width / 2, 0);
+  });
+
+  it('reads the clear gap between the lugs as the strap width', async () => {
+    const trimmed = await sharp(await head({ crown: false })).trim().png().toBuffer();
+    const m = await measureFace(trimmed);
+    expect(m.lugGap).not.toBeNull();
+    expect(m.lugGap! / m.width).toBeCloseTo(80 / 280, 1); // gap 160..240 of a 120..280 head
   });
 });

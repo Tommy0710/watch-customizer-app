@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { DRAFT_CANVAS_WIDTH, DRAFT_CANVAS_HEIGHT, DRAFT_MARGIN_RATIO } from './draftComposite';
 import { removeWhiteBackground } from './removeWhiteBackground';
-import { trimSpringBarPins, measureSegment } from './segmentFit';
+import { trimSpringBarPins, measureSegment, measureFace } from './segmentFit';
 import type { SegmentMetrics } from './segmentFit';
 import type { SplitStrap } from './strapSegments';
 
@@ -72,12 +72,15 @@ export function computeSegmentedLayout(input: {
     caseAspect: number; // height / width of the watch head
     buckleAspect: number; // length of the buckle segment in strap widths
     tailAspect: number;
+    // Strap width as a fraction of head width, when the head's lug gap could be read. Clamped,
+    // because a misread gap would resize the whole assembly rather than fail visibly.
+    strapPerCase?: number;
 }): SegmentedDraftLayout {
+    const strapsPerCase = Math.min(0.62, Math.max(0.35, input.strapPerCase ?? SEGMENT_TO_CASE_WIDTH_RATIO));
     const marginY = Math.round(DRAFT_CANVAS_HEIGHT * DRAFT_MARGIN_RATIO);
 
     // Assembly height as a multiple of case width. Leather hidden behind the case is not length the
     // viewer sees, hence the two overlaps coming back off it.
-    const strapsPerCase = SEGMENT_TO_CASE_WIDTH_RATIO;
     const heightInCases =
         (input.buckleAspect + input.tailAspect) * strapsPerCase +
         input.caseAspect * (1 - CASE_OVERLAP_RATIO * 2);
@@ -91,7 +94,7 @@ export function computeSegmentedLayout(input: {
     const caseScale = needed <= roomy ? 1 : Math.max(MIN_CASE_SCALE, tight / needed);
 
     const caseWidth = Math.round(fullCaseWidth * caseScale);
-    const segmentWidth = Math.max(1, Math.round(caseWidth * SEGMENT_TO_CASE_WIDTH_RATIO));
+    const segmentWidth = Math.max(1, Math.round(caseWidth * strapsPerCase));
     const caseHeight = Math.round(caseWidth * input.caseAspect);
     const overlap = Math.round(caseHeight * CASE_OVERLAP_RATIO);
     const buckleHeight = Math.max(1, Math.round(segmentWidth * input.buckleAspect));
@@ -138,11 +141,19 @@ export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buff
         measureSegment(tail, 'top'),
     ]);
 
+    const face = await measureFace(preparedFace);
     const layout = computeSegmentedLayout({
         caseAspect: faceMeta.height / faceMeta.width,
         buckleAspect: buckleMetrics.aspect,
         tailAspect: tailMetrics.aspect,
+        strapPerCase: face.lugGap === null ? undefined : face.lugGap / face.width,
     });
+
+    // The head is placed so its LUG AXIS lands on the middle of the frame, and the strap follows the
+    // same axis. Centring bounding boxes instead put every crowned watch's strap off to one side.
+    const caseScaleX = layout.caseWidth / face.width;
+    const strapAxis = DRAFT_CANVAS_WIDTH / 2;
+    const caseLeft = Math.round(strapAxis - face.lugCentre * caseScaleX);
 
     // One scale per segment, taken from its lug width, so both halves meet the case at the same
     // strap width and the leather is scaled rather than squashed. A buckle wider than the strap
@@ -158,7 +169,7 @@ export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buff
                 })
                 .png()
                 .toBuffer(),
-            left: Math.round(DRAFT_CANVAS_WIDTH / 2 - metrics.lugCentre * scale),
+            left: Math.round(strapAxis - metrics.lugCentre * scale),
             top,
         };
     };
@@ -184,7 +195,7 @@ export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buff
             buckleLayer,
             tailLayer,
             // Case last so it sits over the leather at both lug ends.
-            { input: caseLayer, left: layout.caseLeft, top: layout.caseTop },
+            { input: caseLayer, left: caseLeft, top: layout.caseTop },
         ])
         .png({ compressionLevel: 9 })
         .toBuffer();
