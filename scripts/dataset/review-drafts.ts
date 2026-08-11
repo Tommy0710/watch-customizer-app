@@ -5,6 +5,7 @@ import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { trimSpringBarPins, measureSegment, measureFace } from '../../src/lib/segmentFit';
 import { removeWhiteBackground } from '../../src/lib/removeWhiteBackground';
 import { assessDraft } from '../../src/lib/draftStandard';
+import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { buildSegmentedDraft, computeSegmentedLayout } from '../../src/lib/segmentedDraft';
 import sharpMeta from 'sharp';
 import { getObjectBuffer } from '../../src/lib/aws';
@@ -31,6 +32,21 @@ const PANEL_H = 940;
 const LABEL_H = 42;
 
 const exists = async (f: string) => { try { await access(f); return true; } catch { return false; } };
+
+
+// Compared against the catalog photo, because the render is the thing that can drift — a black
+// strap coming back brown is a fault a reviewer spots instantly and the geometry checks cannot.
+async function strapColourVerdict(productId: number, catalogUrl: string, render: Buffer) {
+    const crop = path.join(OUT_DIR, 'straps', `${productId}.png`);
+    let source: Buffer;
+    try {
+        source = await readFile(crop);
+    } catch {
+        source = Buffer.from(await (await fetch(catalogUrl)).arrayBuffer());
+    }
+    const [a, b] = await Promise.all([measureStrapColour(source), measureStrapColour(render)]);
+    return compareStrapColour(a, b);
+}
 
 async function main() {
     const { train, heldOut }: { train: Combo[]; heldOut: Combo[] } =
@@ -80,6 +96,7 @@ async function main() {
             buckleShare: b.aspect / (b.aspect + t.aspect),
             caseScale,
             lugGapRead: facePoints.lugGap !== null,
+            colour: await strapColourVerdict(productId, combo.strapImage, await readFile(path.join(OUT_DIR, 'straps-clean', file))),
         });
         if (verdict.ok) passed++;
         const fit = verdict.ok ? ' · PASS' : ` · FAIL: ${verdict.reasons[0].slice(0, 64)}`;

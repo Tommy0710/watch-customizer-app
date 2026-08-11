@@ -78,22 +78,43 @@ export function hueDistance(a: number, b: number): number {
     return diff > 180 ? 360 - diff : diff;
 }
 
-export type ColourVerdict = { ok: boolean; hueDelta: number; reason?: string };
+export type ColourVerdict = { ok: boolean; hueDelta: number; saturationGain: number; reason?: string };
 
 // 30° of hue is generous enough to absorb lighting and white-balance differences between a staged
 // photo and a studio render, while still catching navy-turned-brown (roughly 220° vs 30°).
 const MAX_HUE_DELTA = 30;
 const MIN_SAMPLE_RATIO = 0.02;
 
+// Hue cannot judge black, white or grey leather, and that is exactly where the worst drift happens:
+// a reviewer rejected a "Vintage Black Togo" render on sight while this check waved it through.
+// What gives it away is that the render INVENTED colour — its sampled pixels came back 2.6x more
+// saturated than the source's. Measured over 74 renders the median gain is 0.98 and the 90th
+// percentile 1.37, and only three exceed 2.0: the black Togo, a black Pueblo and a white sailcloth.
+// Both conditions have to hold, so a nearly-colourless strap whose saturation doubles from very
+// little is not condemned for it.
+const MAX_SATURATION_GAIN = 2.0;
+const MIN_SATURATION_RISE = 0.15;
+
 export function compareStrapColour(source: StrapColour, render: StrapColour): ColourVerdict {
+    const saturationGain = render.saturation / Math.max(source.saturation, 0.01);
+    const saturationRise = render.saturation - source.saturation;
+    if (saturationGain >= MAX_SATURATION_GAIN && saturationRise >= MIN_SATURATION_RISE) {
+        return {
+            ok: false,
+            hueDelta: 0,
+            saturationGain,
+            reason: `render invented colour — ${saturationGain.toFixed(1)}x the source's saturation`,
+        };
+    }
+
     if (source.sampleRatio < MIN_SAMPLE_RATIO || render.sampleRatio < MIN_SAMPLE_RATIO) {
-        // Near-greyscale leather (black, white, grey) has no meaningful hue to compare, so this
-        // check cannot judge it either way — let it through rather than reject blindly.
-        return { ok: true, hueDelta: 0, reason: 'too little saturated colour to compare' };
+        // Near-greyscale leather has no meaningful hue to compare. The saturation test above is
+        // what covers it; hue is left alone rather than judged on noise.
+        return { ok: true, hueDelta: 0, saturationGain, reason: 'too little saturated colour to compare hue' };
     }
 
     const hueDelta = hueDistance(source.hue, render.hue);
     return hueDelta <= MAX_HUE_DELTA
-        ? { ok: true, hueDelta }
-        : { ok: false, hueDelta, reason: `hue shifted ${Math.round(hueDelta)}°` };
+        ? { ok: true, hueDelta, saturationGain }
+        : { ok: false, hueDelta, saturationGain, reason: `hue shifted ${Math.round(hueDelta)}°` };
 }

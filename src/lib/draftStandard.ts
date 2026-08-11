@@ -32,6 +32,10 @@ export type DraftFacts = {
     buckleShare: number; // buckle segment's share of total strap length
     caseScale: number; // as reported by computeSegmentedLayout
     lugGapRead: boolean; // whether the head's lug gap could be measured
+    // Why colour belongs in the same verdict as geometry: a reviewer looking at a sheet of drafts
+    // rejects a brown-ified black strap and an upside-down one in the same pass, and the gate is
+    // only trustworthy if it rejects everything they would.
+    colour?: { ok: boolean; reason?: string };
 };
 
 export function assessDraft(facts: DraftFacts): DraftAssessment {
@@ -50,6 +54,10 @@ export function assessDraft(facts: DraftFacts): DraftAssessment {
         reasons.push(
             `watch had to be shrunk to ${Math.round(facts.caseScale * 100)}% to fit the strap — re-render the strap rather than accept an undersized watch`,
         );
+    }
+
+    if (facts.colour && !facts.colour.ok) {
+        reasons.push(`strap colour does not match the catalog photo — ${facts.colour.reason ?? 'drifted'}; re-render`);
     }
 
     if (!facts.lugGapRead) {

@@ -70,12 +70,34 @@ describe('compareStrapColour', () => {
     expect(verdict.ok).toBe(true);
   });
 
-  it('passes greyscale straps rather than judging them on hue', () => {
+  it('does not judge a greyscale strap on hue when it stayed greyscale', () => {
     const verdict = compareStrapColour(
-      { hue: 0, saturation: 0, sampleRatio: 0 },
-      { hue: 200, saturation: 0.4, sampleRatio: 0.3 },
+      { hue: 0, saturation: 0.14, sampleRatio: 0.004 },
+      { hue: 200, saturation: 0.15, sampleRatio: 0.18 },
     );
     expect(verdict.ok).toBe(true);
     expect(verdict.reason).toContain('too little saturated colour');
+  });
+
+  it('catches a black strap that came back brown', () => {
+    // This case used to pass, and a reviewer rejected the draft on sight: product 25533, "Vintage
+    // Black Togo", source saturation 0.149 against the render's 0.388. Hue cannot see it — black
+    // has no hue — but inventing colour out of nothing is unmistakable on saturation alone.
+    const verdict = compareStrapColour(
+      { hue: 30, saturation: 0.149, sampleRatio: 0.398 },
+      { hue: 32, saturation: 0.388, sampleRatio: 0.341 },
+    );
+    expect(verdict.ok).toBe(false);
+    expect(verdict.reason).toContain('invented colour');
+  });
+
+  it('leaves a dark grey strap alone when it only gains a little', () => {
+    // Product 26777, accepted on review: 0.141 to 0.206. The gate must not condemn ordinary studio
+    // lighting picking up more colour than a staged catalog shot did.
+    const verdict = compareStrapColour(
+      { hue: 30, saturation: 0.141, sampleRatio: 0.234 },
+      { hue: 35, saturation: 0.206, sampleRatio: 0.15 },
+    );
+    expect(verdict.ok).toBe(true);
   });
 });

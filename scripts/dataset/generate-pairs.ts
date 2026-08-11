@@ -7,6 +7,7 @@ import { trimSpringBarPins, measureSegment, measureFace } from '../../src/lib/se
 import { computeSegmentedLayout } from '../../src/lib/segmentedDraft';
 import { removeWhiteBackground } from '../../src/lib/removeWhiteBackground';
 import { assessDraft } from '../../src/lib/draftStandard';
+import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
@@ -34,7 +35,7 @@ function flag(name: string): boolean {
 }
 
 // The same judgement the review sheet shows, applied before any money is spent.
-async function assessSegments(segments: SplitStrap, faceBuffer: Buffer) {
+async function assessSegments(segments: SplitStrap, faceBuffer: Buffer, strapBuffer: Buffer, catalogUrl: string, productId: number) {
     const prepared = await sharp(await removeWhiteBackground(faceBuffer))
         .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
         .png()
@@ -51,10 +52,22 @@ async function assessSegments(segments: SplitStrap, faceBuffer: Buffer) {
         tailAspect: tail.aspect,
         strapPerCase: face.lugGap === null ? undefined : face.lugGap / face.width,
     });
+    let source: Buffer;
+    try {
+        source = await readFile(path.join(OUT_DIR, 'straps', `${productId}.png`));
+    } catch {
+        source = Buffer.from(await (await fetch(catalogUrl)).arrayBuffer());
+    }
+    const [sourceColour, renderColour] = await Promise.all([
+        measureStrapColour(source),
+        measureStrapColour(strapBuffer),
+    ]);
+
     return assessDraft({
         buckleShare: buckle.aspect / (buckle.aspect + tail.aspect),
         caseScale,
         lugGapRead: face.lugGap !== null,
+        colour: compareStrapColour(sourceColour, renderColour),
     });
 }
 
@@ -190,7 +203,7 @@ async function main() {
         // Assessed BEFORE the guard is charged. A pair built from a draft that fails the standard
         // teaches the model the fault, and a call already made cannot be un-billed.
         const verdict = segments
-            ? await assessSegments(segments, faceBuffer)
+            ? await assessSegments(segments, faceBuffer, strapBuffer, combo.strapImage, combo.productId)
             : { ok: false, reasons: ['the render could not be split into two segments'] };
         if (!verdict.ok) {
             console.warn(`  ⏭  ${combo.id} — ${verdict.reasons[0]}`);
