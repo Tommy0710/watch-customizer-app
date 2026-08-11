@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, rm, readdir, access } from 'node:fs/promise
 import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
+import { trimSpringBarPins, measureSegment } from '../../src/lib/segmentFit';
 import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
@@ -53,6 +54,15 @@ async function main() {
         const { buffer: face } = await getObjectBuffer(combo.faceKey);
         const draft = await buildSegmentedDraft(segments, face);
 
+        // The draft now shows whatever balance the render has, so an over-long buckle side is a
+        // render fault to catch here rather than something the layout quietly corrects. A real
+        // strap's buckle side is around 38% of its total length.
+        const [b, t] = await Promise.all([
+            measureSegment(await trimSpringBarPins(segments.buckle, 'bottom'), 'bottom'),
+            measureSegment(await trimSpringBarPins(segments.tail, 'top'), 'top'),
+        ]);
+        const buckleShare = Math.round((b.aspect / (b.aspect + t.aspect)) * 100);
+
         const cropPath = path.join(OUT_DIR, 'straps', `${productId}.png`);
         const source = (await exists(cropPath))
             ? await readFile(cropPath)
@@ -67,7 +77,7 @@ async function main() {
             `<svg width="${PANEL_W * 2}" height="${LABEL_H}">
                <rect width="100%" height="100%" fill="#111"/>
                <text x="16" y="28" font-family="system-ui,sans-serif" font-size="17" fill="#eee">
-                 ${String(index + 1).padStart(2, '0')}/${files.length} — ${combo.productName.replace(/[<&]/g, '').slice(0, 60)}
+                 ${String(index + 1).padStart(2, '0')}/${files.length} — ${combo.productName.replace(/[<&]/g, '').slice(0, 52)} · buckle side ${buckleShare}% (real ≈38%)
                </text>
              </svg>`,
         );

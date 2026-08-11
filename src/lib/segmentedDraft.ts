@@ -1,7 +1,8 @@
 import sharp from 'sharp';
 import { DRAFT_CANVAS_WIDTH, DRAFT_CANVAS_HEIGHT, DRAFT_MARGIN_RATIO } from './draftComposite';
 import { removeWhiteBackground } from './removeWhiteBackground';
-import { trimSpringBarPins, fitSegmentToSlot } from './segmentFit';
+import { trimSpringBarPins, measureSegment } from './segmentFit';
+import type { SegmentMetrics } from './segmentFit';
 import type { SplitStrap } from './strapSegments';
 
 // Lays a strap out the way a finished watch actually reads: buckle segment above, case in the
@@ -18,16 +19,18 @@ import type { SplitStrap } from './strapSegments';
 export const CASE_WIDTH_RATIO = 0.30;
 export const SEGMENT_TO_CASE_WIDTH_RATIO = 1 / 1.6;
 
-// The buckle side of a strap is the short side. Started at 0.30, matching what the production
-// pipeline settled on, but that read as unbalanced once the segments were laid out vertically —
-// the case sat too high in the frame. Raised to 0.36 on review (2026-08-10): long enough to look
-// composed, still clearly shorter than the tail, which is how a real strap is built.
+// There is deliberately no target for how much of the strap the buckle side should take up.
 //
-// Safe to change after the training pairs were generated at 0.30, because those pairs teach
-// geometry PRESERVATION rather than a fixed proportion: measured across 12 of them, PRO reproduced
-// the draft's own ratio almost exactly (32%→32%, 33%→34%, 35%→35%). Verify it carries through at
-// eval — if outputs snap back toward 30%, the training set would need regenerating at 0.36.
-export const BUCKLE_LENGTH_RATIO = 0.36;
+// There used to be: 0.30, then 0.36 on review. Holding a fixed ratio meant forcing each segment
+// into a slot of a size the product had no say in, and every way of doing that damages the strap —
+// stretching deforms the buckle and desynchronises the grain between the two halves, cutting leaves
+// a step in the tapered edge. The balance now comes from the two pieces themselves and the frame is
+// solved around them, so the draft can only ever show the strap the supplier actually made.
+//
+// When a clean render normalises the two halves to the same length — measured across 74 renders the
+// median buckle share is 49%, where a real strap is nearer 38% — that shows up as a watch with too
+// long a buckle side. That is a fault in the render and belongs in the render review, not something
+// the layout should paper over.
 
 // How far the case overlaps each segment end, as a fraction of case height — the lugs sit on top
 // of the leather rather than merely touching it.
@@ -46,26 +49,42 @@ export type SegmentedDraftLayout = {
     segmentLeft: number;
 };
 
+// Solves the frame around the strap rather than the strap into the frame.
+//
+// Both segment lengths arrive measured in strap widths, so once a strap width is chosen everything
+// else follows from it. Picking that width to make the whole assembly fill the frame is what a
+// photographer does when framing a shot: step back for a long strap, closer for a short one. The
+// segments are then placed at exactly their own proportions and never resampled unevenly.
 export function computeSegmentedLayout(input: {
     caseAspect: number; // height / width of the watch head
-    buckleLengthRatio?: number; // overrides BUCKLE_LENGTH_RATIO, for comparing proportions
+    buckleAspect: number; // length of the buckle segment in strap widths
+    tailAspect: number;
 }): SegmentedDraftLayout {
-    const buckleRatio = input.buckleLengthRatio ?? BUCKLE_LENGTH_RATIO;
     const marginY = Math.round(DRAFT_CANVAS_HEIGHT * DRAFT_MARGIN_RATIO);
-    const totalStrapHeight = DRAFT_CANVAS_HEIGHT - marginY * 2;
+    const available = DRAFT_CANVAS_HEIGHT - marginY * 2;
 
-    const caseWidth = Math.round(DRAFT_CANVAS_WIDTH * CASE_WIDTH_RATIO);
+    // Assembly height as a multiple of strap width. Leather hidden behind the case is not length
+    // the viewer sees, hence the two overlaps coming back off the case.
+    const caseWidthInStraps = 1 / SEGMENT_TO_CASE_WIDTH_RATIO;
+    const caseHeightInStraps = caseWidthInStraps * input.caseAspect;
+    const heightInStraps =
+        input.buckleAspect + input.tailAspect + caseHeightInStraps * (1 - CASE_OVERLAP_RATIO * 2);
+
+    // Never larger than the old fixed geometry: that case size was chosen against real assembled
+    // renders, so it stays the ceiling and a long strap only ever zooms out from it.
+    const widest = DRAFT_CANVAS_WIDTH * CASE_WIDTH_RATIO * SEGMENT_TO_CASE_WIDTH_RATIO;
+    const segmentWidth = Math.max(1, Math.round(Math.min(widest, available / heightInStraps)));
+
+    const caseWidth = Math.round(segmentWidth * caseWidthInStraps);
     const caseHeight = Math.round(caseWidth * input.caseAspect);
-    const segmentWidth = Math.round(caseWidth * SEGMENT_TO_CASE_WIDTH_RATIO);
-
     const overlap = Math.round(caseHeight * CASE_OVERLAP_RATIO);
-    // Leather hidden behind the case is not strap length the viewer sees, so the two visible
-    // segment lengths share what is left once the case has taken its place.
-    const visibleStrap = totalStrapHeight - (caseHeight - overlap * 2);
-    const buckleHeight = Math.max(1, Math.round(visibleStrap * buckleRatio));
-    const tailHeight = Math.max(1, visibleStrap - buckleHeight);
+    const buckleHeight = Math.max(1, Math.round(segmentWidth * input.buckleAspect));
+    const tailHeight = Math.max(1, Math.round(segmentWidth * input.tailAspect));
 
-    const buckleTop = marginY;
+    // Centred, so a strap short enough to leave slack sits in the middle of the frame instead of
+    // hanging off the top margin.
+    const assembly = buckleHeight + tailHeight + caseHeight - overlap * 2;
+    const buckleTop = Math.max(marginY, Math.round((DRAFT_CANVAS_HEIGHT - assembly) / 2));
     const caseTop = buckleTop + buckleHeight - overlap;
     const tailTop = caseTop + caseHeight - overlap;
 
@@ -83,25 +102,7 @@ export function computeSegmentedLayout(input: {
     };
 }
 
-// Both ends of a segment carry the product's real shape — the spring-bar joint that pins into the
-// case, and the buckle or curved tip at the far end — so neither may be cropped away, and neither
-// may be deformed to make the piece fit. fitSegmentToSlot handles that: it scales uniformly and
-// takes the surplus length out of a band of plain leather. See src/lib/segmentFit.ts.
-async function fitSegment(
-    segment: Buffer,
-    width: number,
-    height: number,
-    role: 'buckle' | 'tail',
-): Promise<Buffer> {
-    const withoutPins = await trimSpringBarPins(segment, role === 'buckle' ? 'bottom' : 'top');
-    return fitSegmentToSlot(withoutPins, width, height, role);
-}
-
-export async function buildSegmentedDraft(
-    segments: SplitStrap,
-    faceBuffer: Buffer,
-    buckleLengthRatio?: number,
-): Promise<Buffer> {
+export async function buildSegmentedDraft(segments: SplitStrap, faceBuffer: Buffer): Promise<Buffer> {
     const preparedFace = await sharp(await removeWhiteBackground(faceBuffer))
         .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
         .png()
@@ -110,11 +111,45 @@ export async function buildSegmentedDraft(
     const faceMeta = await sharp(preparedFace).metadata();
     if (!faceMeta.width || !faceMeta.height) throw new Error('Face image has no readable dimensions');
 
-    const layout = computeSegmentedLayout({ caseAspect: faceMeta.height / faceMeta.width, buckleLengthRatio });
+    // Pins first: they stick out past the leather, so measuring before removing them would read the
+    // strap as wider than it is and shrink the whole assembly to compensate.
+    const [buckle, tail] = await Promise.all([
+        trimSpringBarPins(segments.buckle, 'bottom'),
+        trimSpringBarPins(segments.tail, 'top'),
+    ]);
+    const [buckleMetrics, tailMetrics] = await Promise.all([
+        measureSegment(buckle, 'bottom'),
+        measureSegment(tail, 'top'),
+    ]);
+
+    const layout = computeSegmentedLayout({
+        caseAspect: faceMeta.height / faceMeta.width,
+        buckleAspect: buckleMetrics.aspect,
+        tailAspect: tailMetrics.aspect,
+    });
+
+    // One scale per segment, taken from its lug width, so both halves meet the case at the same
+    // strap width and the leather is scaled rather than squashed. A buckle wider than the strap
+    // simply makes its layer wider than segmentWidth, which is what a buckle really does.
+    const place = async (segment: Buffer, metrics: SegmentMetrics, top: number) => {
+        const scale = layout.segmentWidth / metrics.lugWidth;
+        return {
+            input: await sharp(segment)
+                .resize({
+                    width: Math.max(1, Math.round(metrics.width * scale)),
+                    height: Math.max(1, Math.round(metrics.height * scale)),
+                    fit: 'fill',
+                })
+                .png()
+                .toBuffer(),
+            left: Math.round(DRAFT_CANVAS_WIDTH / 2 - metrics.lugCentre * scale),
+            top,
+        };
+    };
 
     const [buckleLayer, tailLayer, caseLayer] = await Promise.all([
-        fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight, 'buckle'),
-        fitSegment(segments.tail, layout.segmentWidth, layout.tailHeight, 'tail'),
+        place(buckle, buckleMetrics, layout.buckleTop),
+        place(tail, tailMetrics, layout.tailTop),
         sharp(preparedFace)
             .resize({ width: layout.caseWidth, height: layout.caseHeight, fit: 'fill' })
             .png()
@@ -130,8 +165,8 @@ export async function buildSegmentedDraft(
         },
     })
         .composite([
-            { input: buckleLayer, left: layout.segmentLeft, top: layout.buckleTop },
-            { input: tailLayer, left: layout.segmentLeft, top: layout.tailTop },
+            buckleLayer,
+            tailLayer,
             // Case last so it sits over the leather at both lug ends.
             { input: caseLayer, left: layout.caseLeft, top: layout.caseTop },
         ])

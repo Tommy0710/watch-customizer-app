@@ -1,27 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { trimSpringBarPins, plainBand, fitSegmentToSlot } from '@/lib/segmentFit';
+import { trimSpringBarPins, measureSegment } from '@/lib/segmentFit';
+import { computeSegmentedLayout } from '@/lib/segmentedDraft';
 
 const W = 160;
 const H = 900;
 
-// A strap segment: a leather column, optionally with a spring bar poking out sideways at one end,
-// and optionally with a horizontal stripe pattern so a cut can be checked for landing on it.
-async function strap(opts: { pins?: 'top' | 'bottom'; period?: number } = {}): Promise<Buffer> {
+// A strap segment: a leather column, optionally with a spring bar poking out sideways at one end.
+async function strap(pins?: 'top' | 'bottom'): Promise<Buffer> {
   const px = Buffer.alloc(W * H * 3, 255);
-  const left = Math.round(W * 0.2);
-  const right = Math.round(W * 0.8);
   for (let y = 0; y < H; y++) {
-    const onStripe = opts.period ? y % opts.period < opts.period / 2 : false;
-    for (let x = left; x < right; x++) {
+    for (let x = Math.round(W * 0.2); x < Math.round(W * 0.8); x++) {
       const o = (y * W + x) * 3;
-      px[o] = onStripe ? 60 : 120;
-      px[o + 1] = onStripe ? 30 : 60;
-      px[o + 2] = onStripe ? 20 : 40;
+      px[o] = 120; px[o + 1] = 60; px[o + 2] = 40;
     }
   }
-  if (opts.pins) {
-    const from = opts.pins === 'top' ? Math.round(H * 0.02) : Math.round(H * 0.94);
+  if (pins) {
+    const from = pins === 'top' ? Math.round(H * 0.02) : Math.round(H * 0.94);
     for (let y = from; y < from + 10; y++) {
       for (const x of [4, 5, 6, 7, W - 8, W - 7, W - 6, W - 5]) {
         const o = (y * W + x) * 3;
@@ -32,85 +27,83 @@ async function strap(opts: { pins?: 'top' | 'bottom'; period?: number } = {}): P
   return sharp(px, { raw: { width: W, height: H, channels: 3 } }).png().toBuffer();
 }
 
-const widthOf = async (b: Buffer) => (await sharp(b).metadata()).width!;
+const sizeOf = async (b: Buffer) => {
+  const m = await sharp(b).metadata();
+  return { width: m.width!, height: m.height! };
+};
 
 describe('trimSpringBarPins', () => {
   it('takes the protruding bar off without shortening the segment', async () => {
-    const withPins = await strap({ pins: 'bottom' });
+    const withPins = await sharp(await strap('bottom')).trim().png().toBuffer();
     const cleaned = await trimSpringBarPins(withPins, 'bottom');
 
-    // The pins made the trimmed image wider than the leather; removing them narrows it back.
-    expect(await widthOf(cleaned)).toBeLessThan(await widthOf(await sharp(withPins).trim().png().toBuffer()));
+    const before = await sizeOf(withPins);
+    const after = await sizeOf(cleaned);
+    expect(after.width).toBeLessThan(before.width);
     // Length is what must NOT change: the leather still has to reach the case.
-    const before = (await sharp(withPins).trim().png().toBuffer());
-    const beforeH = (await sharp(before).metadata()).height!;
-    const afterH = (await sharp(cleaned).metadata()).height!;
-    expect(afterH / beforeH).toBeGreaterThan(0.97);
+    expect(after.height / before.height).toBeGreaterThan(0.97);
   });
 
   it('leaves a segment with no protruding bar alone', async () => {
     const plain = await sharp(await strap()).trim().png().toBuffer();
-    const cleaned = await trimSpringBarPins(plain, 'top');
-    expect(await widthOf(cleaned)).toBe(await widthOf(plain));
+    expect((await sizeOf(await trimSpringBarPins(plain, 'top'))).width).toBe((await sizeOf(plain)).width);
   });
 });
 
-describe('plainBand', () => {
-  it('protects the buckle at the top and the spring bar at the bottom', () => {
-    const band = plainBand(1000, 160, 'buckle');
-    expect(band.from).toBeGreaterThan(200); // buckle plus keepers
-    expect(band.to).toBeLessThan(1000);
+describe('computeSegmentedLayout', () => {
+  it('gives each segment a slot at its own proportions', async () => {
+    // The whole point: nothing is squashed to hit a target balance, so a slot's aspect has to come
+    // back exactly as it went in.
+    const layout = computeSegmentedLayout({ caseAspect: 1, buckleAspect: 3.2, tailAspect: 5.5 });
+    expect(layout.buckleHeight / layout.segmentWidth).toBeCloseTo(3.2, 1);
+    expect(layout.tailHeight / layout.segmentWidth).toBeCloseTo(5.5, 1);
   });
 
-  it('protects the tip at the bottom and the spring bar at the top for a tail', () => {
-    const buckle = plainBand(1000, 160, 'buckle');
-    const tail = plainBand(1000, 160, 'tail');
-    // The two are mirror images: the buckle end is bigger than the tip, and it sits at the
-    // opposite end of the piece.
-    expect(tail.from).toBeLessThan(buckle.from);
-    expect(1000 - tail.to).toBeGreaterThan(1000 - buckle.to);
+  it('zooms out for a longer strap instead of compressing it', async () => {
+    const short = computeSegmentedLayout({ caseAspect: 1, buckleAspect: 3.2, tailAspect: 5.5 });
+    const long = computeSegmentedLayout({ caseAspect: 1, buckleAspect: 5.5, tailAspect: 5.6 });
+    expect(long.segmentWidth).toBeLessThan(short.segmentWidth);
+    expect(long.tailHeight / long.segmentWidth).toBeCloseTo(5.6, 1);
+  });
+
+  it('never draws the case bigger than the geometry tuned against real renders', async () => {
+    const tiny = computeSegmentedLayout({ caseAspect: 1, buckleAspect: 0.5, tailAspect: 0.5 });
+    expect(tiny.caseWidth).toBeLessThanOrEqual(Math.round(832 * 0.3) + 1);
+  });
+
+  it('keeps the whole assembly inside the canvas', async () => {
+    for (const [b, t] of [[3.2, 5.5], [5.5, 5.6], [1.5, 9.0]]) {
+      const l = computeSegmentedLayout({ caseAspect: 1.2, buckleAspect: b, tailAspect: t });
+      expect(l.buckleTop).toBeGreaterThanOrEqual(0);
+      expect(l.tailTop + l.tailHeight).toBeLessThanOrEqual(1472);
+    }
   });
 });
 
-describe('fitSegmentToSlot', () => {
-  it('produces exactly the slot it was given', async () => {
-    const out = await fitSegmentToSlot(await strap(), 156, 398, 'buckle');
-    const m = await sharp(out).metadata();
-    expect(m.width).toBe(156);
-    expect(m.height).toBe(398);
+describe('measureSegment', () => {
+  it('measures length in lug widths, so two resolutions of one strap agree', async () => {
+    const base = await sharp(await strap()).trim().png().toBuffer();
+    const half = await sharp(base).resize({ width: Math.round((await sizeOf(base)).width / 2) }).png().toBuffer();
+    expect((await measureSegment(half, 'top')).aspect).toBeCloseTo((await measureSegment(base, 'top')).aspect, 1);
   });
 
-  it('keeps the grain at one scale instead of squashing the whole piece', async () => {
-    // Both halves come off renders of near-equal length but get very different slots. Under the
-    // old whole-segment stretch that left the stripes running at two different scales on the two
-    // sides of the same watch; cutting length out of the middle keeps them matched.
-    const source = await strap({ period: 40 });
-    const [asBuckle, asTail] = await Promise.all([
-      fitSegmentToSlot(source, 156, 398, 'buckle'),
-      fitSegmentToSlot(source, 156, 708, 'tail'),
-    ]);
+  it('reads the leather width, not the width of a buckle overhanging it', async () => {
+    // Sizing both halves off their bounding boxes made the buckle half's leather come out narrower
+    // than the tail's, and the strap visibly stepped in where it met the case.
+    const plain = await sharp(await strap()).trim().png().toBuffer();
+    const { width } = await sizeOf(plain);
+    const withBuckle = await sharp({
+      create: { width: Math.round(width * 1.4), height: H + 120, channels: 3, background: { r: 255, g: 255, b: 255 } },
+    })
+      .composite([
+        { input: plain, left: Math.round(width * 0.2), top: 120 },
+        { input: await sharp({ create: { width: Math.round(width * 1.4), height: 110, channels: 3, background: { r: 190, g: 190, b: 190 } } }).png().toBuffer(), left: 0, top: 0 },
+      ])
+      .png()
+      .toBuffer();
 
-    const stripePeriod = async (image: Buffer): Promise<number> => {
-      const { data, info } = await sharp(image).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-      const dark: boolean[] = [];
-      for (let y = 0; y < info.height; y++) {
-        const o = (y * info.width + Math.floor(info.width / 2)) * info.channels;
-        dark.push(data[o] < 90);
-      }
-      let edges = 0;
-      for (let y = 1; y < dark.length; y++) if (dark[y] !== dark[y - 1]) edges++;
-      return edges === 0 ? Infinity : (2 * dark.length) / edges;
-    };
-
-    const [pb, pt] = await Promise.all([stripePeriod(asBuckle), stripePeriod(asTail)]);
-    expect(Math.abs(pb - pt) / pt).toBeLessThan(0.12);
-  });
-
-  it('stretches rather than cutting when there is no plain leather to spare', async () => {
-    // A slot so short that the protected zones alone overfill it: nothing can be cut, and losing
-    // the buckle or the spring bar would be worse than a squash.
-    const out = await fitSegmentToSlot(await strap(), 156, 60, 'buckle');
-    const m = await sharp(out).metadata();
-    expect(m.height).toBe(60);
+    const m = await measureSegment(withBuckle, 'bottom');
+    expect(m.lugWidth).toBeLessThan(m.width * 0.8);
+    expect(m.lugWidth / width).toBeCloseTo(1, 1);
   });
 });
