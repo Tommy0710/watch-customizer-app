@@ -13,11 +13,22 @@ import type { SplitStrap } from './strapSegments';
 // With this layout the draft is already almost the answer, so the edit left to learn is small:
 // join the ends to the lugs and make it photoreal.
 
-// A watch case is wider than its strap — measured off real assembled renders, roughly 1.6x the
-// lug width. Expressed against the canvas so the case reads at a consistent size whatever the
-// source segment resolution happens to be.
+// A watch case is about twice the width of the strap it takes: 40mm case to 20mm lugs, 38 to 20,
+// 42 to 22. This was 1/1.6, eyeballed off assembled renders, which drew the strap a quarter too
+// wide — and since a segment's length is a fixed multiple of its width, too wide also meant too
+// long, which is what forced the frame to zoom out and shrink the watch.
+//
+// At the real ratio the arithmetic closes: a correctly proportioned strap needs 1290px of the
+// 1296px this 9:16 frame has, with the case at full size. That is not a coincidence to be tuned —
+// it is what a real watch photographed in a 9:16 frame measures. A strap that does not fit is a
+// strap the render got wrong.
 export const CASE_WIDTH_RATIO = 0.30;
-export const SEGMENT_TO_CASE_WIDTH_RATIO = 1 / 1.6;
+export const SEGMENT_TO_CASE_WIDTH_RATIO = 1 / 2;
+
+// The watch is drawn at full size unless the strap genuinely cannot be made to fit, and never
+// below this, because past it the draft stops looking like a watch and the render should be redone
+// instead. computeSegmentedLayout reports what it had to use.
+const MIN_CASE_SCALE = 0.85;
 
 // There is deliberately no target for how much of the strap the buckle side should take up.
 //
@@ -47,44 +58,48 @@ export type SegmentedDraftLayout = {
     tailHeight: number;
     tailTop: number;
     segmentLeft: number;
+    caseScale: number; // 1 when the watch is drawn full size; below 1 the render's strap is too long
 };
 
-// Solves the frame around the strap rather than the strap into the frame.
+// Draws the watch at a fixed size and places each segment at exactly its own proportions. Nothing
+// is cut and nothing is squashed, so the only thing that varies between drafts is how long the
+// supplier's strap actually is.
 //
-// Both segment lengths arrive measured in strap widths, so once a strap width is chosen everything
-// else follows from it. Picking that width to make the whole assembly fill the frame is what a
-// photographer does when framing a shot: step back for a long strap, closer for a short one. The
-// segments are then placed at exactly their own proportions and never resampled unevenly.
+// A strap too long to fit is a render fault, not a framing problem, so the only concession is a
+// small last-resort shrink — reported through caseScale, so review can see it and send the render
+// back rather than quietly accepting a shrunken watch.
 export function computeSegmentedLayout(input: {
     caseAspect: number; // height / width of the watch head
     buckleAspect: number; // length of the buckle segment in strap widths
     tailAspect: number;
 }): SegmentedDraftLayout {
     const marginY = Math.round(DRAFT_CANVAS_HEIGHT * DRAFT_MARGIN_RATIO);
-    const available = DRAFT_CANVAS_HEIGHT - marginY * 2;
 
-    // Assembly height as a multiple of strap width. Leather hidden behind the case is not length
-    // the viewer sees, hence the two overlaps coming back off the case.
-    const caseWidthInStraps = 1 / SEGMENT_TO_CASE_WIDTH_RATIO;
-    const caseHeightInStraps = caseWidthInStraps * input.caseAspect;
-    const heightInStraps =
-        input.buckleAspect + input.tailAspect + caseHeightInStraps * (1 - CASE_OVERLAP_RATIO * 2);
+    // Assembly height as a multiple of case width. Leather hidden behind the case is not length the
+    // viewer sees, hence the two overlaps coming back off it.
+    const strapsPerCase = SEGMENT_TO_CASE_WIDTH_RATIO;
+    const heightInCases =
+        (input.buckleAspect + input.tailAspect) * strapsPerCase +
+        input.caseAspect * (1 - CASE_OVERLAP_RATIO * 2);
 
-    // Never larger than the old fixed geometry: that case size was chosen against real assembled
-    // renders, so it stays the ceiling and a long strap only ever zooms out from it.
-    const widest = DRAFT_CANVAS_WIDTH * CASE_WIDTH_RATIO * SEGMENT_TO_CASE_WIDTH_RATIO;
-    const segmentWidth = Math.max(1, Math.round(Math.min(widest, available / heightInStraps)));
+    const fullCaseWidth = DRAFT_CANVAS_WIDTH * CASE_WIDTH_RATIO;
+    const needed = fullCaseWidth * heightInCases;
+    // Eat into the margin before shrinking anything: a slightly tight crop is a smaller lie than a
+    // watch drawn to the wrong size.
+    const roomy = DRAFT_CANVAS_HEIGHT - marginY * 2;
+    const tight = DRAFT_CANVAS_HEIGHT - marginY / 2;
+    const caseScale = needed <= roomy ? 1 : Math.max(MIN_CASE_SCALE, tight / needed);
 
-    const caseWidth = Math.round(segmentWidth * caseWidthInStraps);
+    const caseWidth = Math.round(fullCaseWidth * caseScale);
+    const segmentWidth = Math.max(1, Math.round(caseWidth * SEGMENT_TO_CASE_WIDTH_RATIO));
     const caseHeight = Math.round(caseWidth * input.caseAspect);
     const overlap = Math.round(caseHeight * CASE_OVERLAP_RATIO);
     const buckleHeight = Math.max(1, Math.round(segmentWidth * input.buckleAspect));
     const tailHeight = Math.max(1, Math.round(segmentWidth * input.tailAspect));
 
-    // Centred, so a strap short enough to leave slack sits in the middle of the frame instead of
-    // hanging off the top margin.
+    // Centred, so the watch sits in the middle of the frame whatever length of strap it carries.
     const assembly = buckleHeight + tailHeight + caseHeight - overlap * 2;
-    const buckleTop = Math.max(marginY, Math.round((DRAFT_CANVAS_HEIGHT - assembly) / 2));
+    const buckleTop = Math.round((DRAFT_CANVAS_HEIGHT - assembly) / 2);
     const caseTop = buckleTop + buckleHeight - overlap;
     const tailTop = caseTop + caseHeight - overlap;
 
@@ -99,6 +114,7 @@ export function computeSegmentedLayout(input: {
         tailHeight,
         tailTop,
         segmentLeft: Math.round((DRAFT_CANVAS_WIDTH - segmentWidth) / 2),
+        caseScale,
     };
 }
 

@@ -3,7 +3,8 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { trimSpringBarPins, measureSegment } from '../../src/lib/segmentFit';
-import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
+import { buildSegmentedDraft, computeSegmentedLayout } from '../../src/lib/segmentedDraft';
+import sharpMeta from 'sharp';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
 
@@ -62,6 +63,14 @@ async function main() {
             measureSegment(await trimSpringBarPins(segments.tail, 'top'), 'top'),
         ]);
         const buckleShare = Math.round((b.aspect / (b.aspect + t.aspect)) * 100);
+        const faceMeta = await sharpMeta(face).metadata();
+        const { caseScale } = computeSegmentedLayout({
+            caseAspect: faceMeta.height! / faceMeta.width!,
+            buckleAspect: b.aspect,
+            tailAspect: t.aspect,
+        });
+        // Below 1 means the strap was too long for a full-size watch, which is the render's fault.
+        const fit = caseScale < 0.995 ? ` · WATCH SHRUNK TO ${Math.round(caseScale * 100)}%` : '';
 
         const cropPath = path.join(OUT_DIR, 'straps', `${productId}.png`);
         const source = (await exists(cropPath))
@@ -77,7 +86,7 @@ async function main() {
             `<svg width="${PANEL_W * 2}" height="${LABEL_H}">
                <rect width="100%" height="100%" fill="#111"/>
                <text x="16" y="28" font-family="system-ui,sans-serif" font-size="17" fill="#eee">
-                 ${String(index + 1).padStart(2, '0')}/${files.length} — ${combo.productName.replace(/[<&]/g, '').slice(0, 52)} · buckle side ${buckleShare}% (real ≈38%)
+                 ${String(index + 1).padStart(2, '0')}/${files.length} — ${combo.productName.replace(/[<&]/g, '').slice(0, 52)} · buckle side ${buckleShare}% (real ≈38%)${fit}
                </text>
              </svg>`,
         );
