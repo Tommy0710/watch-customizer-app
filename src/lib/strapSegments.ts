@@ -98,7 +98,108 @@ export async function metalScore(image: Buffer): Promise<number> {
     return total === 0 ? 0 : metal / total;
 }
 
-// Splits a two-segment strap render into its buckle half and its holes/tail half.
+// Which way up is a segment? Catalog photography lays both segments out in whatever direction the
+// shot happened to want, and the earlier draft builder pasted them exactly as found. A reviewer
+// working through 96 assembled drafts marked 45 of them upside down, and measuring the two piles
+// showed why: every one of the 29 drafts they accepted has its buckle-half metal in the top fifth
+// and its tail tapering downward, while the 45 rejects break one rule or the other.
+//
+// The physical rule behind the numbers: a strap segment is full width and squared off at its
+// spring-bar end — the articulated end that pins into the case — and narrows at the far end, to a
+// curved tip on the tail and to the buckle's thin frame on the short piece. The fat end always
+// faces the case. That is measurable without knowing anything about the product.
+export type SegmentStats = {
+    topInk: number; // mean pixels of strap per row near the top edge
+    bottomInk: number;
+    metalFraction: number;
+    metalCentroidY: number; // 0 = top edge, 1 = bottom edge
+};
+
+// Read from a fixed 100x400 stretch so the bands mean the same thing whatever the source
+// resolution or aspect happens to be.
+const PROBE_WIDTH = 100;
+const PROBE_HEIGHT = 400;
+// Sampled just inside each end: `trim` can leave a row or two of near-white behind, and the very
+// last rows of a curved tip are a sliver that reads as noise.
+const END_BAND = { from: 0.03, to: 0.13 } as const;
+// Below this much metal, or with the metal sitting too near the middle to commit, the silhouette
+// decides instead. A pale strap trips the metal test across its whole surface.
+const MIN_METAL_FRACTION = 0.03;
+const MIN_METAL_OFFSET = 0.08;
+
+export async function segmentStats(image: Buffer): Promise<SegmentStats> {
+    const { data, info } = await sharp(image)
+        .resize({ width: PROBE_WIDTH, height: PROBE_HEIGHT, fit: 'fill' })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+    const ink: number[] = [];
+    let metal = 0;
+    let metalWeightedY = 0;
+    let coloured = 0;
+
+    for (let y = 0; y < info.height; y++) {
+        let row = 0;
+        for (let x = 0; x < info.width; x++) {
+            const o = (y * info.width + x) * info.channels;
+            const r = data[o];
+            const g = data[o + 1];
+            const b = data[o + 2];
+            if (r < WHITE_THRESHOLD || g < WHITE_THRESHOLD || b < WHITE_THRESHOLD) row++;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            if (max >= 245 && min >= 245) continue; // white background
+            coloured++;
+            const saturation = max === 0 ? 0 : (max - min) / max;
+            if (saturation < 0.12 && max > 120) {
+                metal++;
+                metalWeightedY += y / info.height;
+            }
+        }
+        ink.push(row);
+    }
+
+    const band = (from: number, to: number) => {
+        const rows = ink.slice(Math.round(info.height * from), Math.round(info.height * to));
+        return rows.reduce((sum, v) => sum + v, 0) / rows.length;
+    };
+
+    return {
+        topInk: band(END_BAND.from, END_BAND.to),
+        bottomInk: band(1 - END_BAND.to, 1 - END_BAND.from),
+        metalFraction: coloured === 0 ? 0 : metal / coloured,
+        metalCentroidY: metal === 0 ? 0.5 : metalWeightedY / metal,
+    };
+}
+
+// True when the segment is upside down for the slot it is about to fill: the buckle half sits
+// above the case (buckle up, spring bar down), the tail half below it (spring bar up, tip down).
+export function segmentNeedsFlip(stats: SegmentStats, role: 'buckle' | 'tail'): boolean {
+    // A buckle is a large, unmistakable metal object at the far end of its segment — a far stronger
+    // signal than the silhouette when there is enough of it to read.
+    if (
+        role === 'buckle' &&
+        stats.metalFraction > MIN_METAL_FRACTION &&
+        Math.abs(stats.metalCentroidY - 0.5) > MIN_METAL_OFFSET
+    ) {
+        return stats.metalCentroidY > 0.5;
+    }
+
+    const fatEndIsTop = stats.topInk > stats.bottomInk;
+    return role === 'buckle' ? fatEndIsTop : !fatEndIsTop;
+}
+
+async function orientSegment(image: Buffer, role: 'buckle' | 'tail'): Promise<Buffer> {
+    if (!segmentNeedsFlip(await segmentStats(image), role)) return image;
+    // A half turn, not a mirror: turning a strap end-for-end is what a person does, and it keeps
+    // the leather grain and stitching running the way they really do.
+    return sharp(image).rotate(180).png().toBuffer();
+}
+
+// Splits a two-segment strap render into its buckle half and its holes/tail half, each turned the
+// way up its slot in the assembled draft needs it.
 // Returns null when the image does not look like two separated segments.
 export async function splitStrapSegments(image: Buffer): Promise<SplitStrap | null> {
     const { density, width, height } = await columnInkDensity(image);
@@ -119,7 +220,13 @@ export async function splitStrapSegments(image: Buffer): Promise<SplitStrap | nu
     const right = await sharp(rightRaw).trim(trim).png().toBuffer();
 
     const [leftMetal, rightMetal] = await Promise.all([metalScore(left), metalScore(right)]);
-    return leftMetal >= rightMetal ? { buckle: left, tail: right } : { buckle: right, tail: left };
+    const halves = leftMetal >= rightMetal ? { buckle: left, tail: right } : { buckle: right, tail: left };
+
+    const [buckle, tail] = await Promise.all([
+        orientSegment(halves.buckle, 'buckle'),
+        orientSegment(halves.tail, 'tail'),
+    ]);
+    return { buckle, tail };
 }
 
 // A strap has one buckle, but PRO sometimes re-renders one onto BOTH segments and the spare then

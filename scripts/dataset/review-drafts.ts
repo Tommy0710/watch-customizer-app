@@ -4,7 +4,6 @@ import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { getObjectBuffer } from '../../src/lib/aws';
-import { loadReversedProducts, applyReversal } from './strapOverrides';
 import type { Combo } from './selectCombos';
 
 // Review the ASSEMBLED DRAFT, not the bare strap render.
@@ -34,8 +33,6 @@ async function main() {
         JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
     const byProduct = new Map<number, Combo>();
     for (const c of [...train, ...heldOut]) if (!byProduct.has(c.productId)) byProduct.set(c.productId, c);
-
-    const reversed = await loadReversedProducts();
     const files = (await readdir(path.join(OUT_DIR, 'straps-clean'))).filter((f) => f.endsWith('.webp')).sort();
 
     await rm(PICK_DIR, { recursive: true, force: true });
@@ -52,7 +49,7 @@ async function main() {
         const raw = await splitStrapSegments(await readFile(path.join(OUT_DIR, 'straps-clean', file)));
         if (!raw) { unsplittable++; continue; }
 
-        const segments = applyReversal(raw, productId, reversed);
+        const segments = raw;
         const { buffer: face } = await getObjectBuffer(combo.faceKey);
         const draft = await buildSegmentedDraft(segments, face);
 
