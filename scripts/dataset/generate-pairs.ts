@@ -1,13 +1,18 @@
 import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
-import { buildDraftComposite } from '../../src/lib/draftComposite';
+import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
+import { trimSpringBarPins, measureSegment, measureFace } from '../../src/lib/segmentFit';
+import { computeSegmentedLayout } from '../../src/lib/segmentedDraft';
+import { removeWhiteBackground } from '../../src/lib/removeWhiteBackground';
+import { assessDraft } from '../../src/lib/draftStandard';
 import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
 import { PRO_ASSEMBLY_PROMPT } from '../../src/lib/proPrompt';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfile';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
+import type { SplitStrap } from '../../src/lib/strapSegments';
 import type { Combo } from './selectCombos';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
@@ -26,6 +31,31 @@ function arg(name: string, fallback: string): string {
 }
 function flag(name: string): boolean {
     return process.argv.includes(`--${name}`);
+}
+
+// The same judgement the review sheet shows, applied before any money is spent.
+async function assessSegments(segments: SplitStrap, faceBuffer: Buffer) {
+    const prepared = await sharp(await removeWhiteBackground(faceBuffer))
+        .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 })
+        .png()
+        .toBuffer();
+    const meta = await sharp(prepared).metadata();
+    const face = await measureFace(prepared);
+    const [buckle, tail] = await Promise.all([
+        measureSegment(await trimSpringBarPins(segments.buckle, 'bottom'), 'bottom'),
+        measureSegment(await trimSpringBarPins(segments.tail, 'top'), 'top'),
+    ]);
+    const { caseScale } = computeSegmentedLayout({
+        caseAspect: meta.height! / meta.width!,
+        buckleAspect: buckle.aspect,
+        tailAspect: tail.aspect,
+        strapPerCase: face.lugGap === null ? undefined : face.lugGap / face.width,
+    });
+    return assessDraft({
+        buckleShare: buckle.aspect / (buckle.aspect + tail.aspect),
+        caseScale,
+        lugGapRead: face.lugGap !== null,
+    });
 }
 
 async function exists(file: string): Promise<boolean> {
@@ -130,6 +160,7 @@ async function main() {
     const accepted = await loadAcceptedProducts();
     let generatedThisRun = 0;
     let skippedForColour = 0;
+    let skippedBelowStandard = 0;
 
     for (const combo of combos) {
         if (done.has(combo.id)) continue;
@@ -140,18 +171,6 @@ async function main() {
         if (generatedThisRun >= limit) {
             console.log(`\n⏸  Reached --limit=${limit} for this run.`);
             break;
-        }
-
-        if (!dryRun) {
-            try {
-                guard.charge(unitCost, `PRO ${combo.id}`);
-            } catch (err) {
-                if (err instanceof SpendExceededError) {
-                    console.warn(`\n🛑 ${err.message}`);
-                    break;
-                }
-                throw err;
-            }
         }
 
         // Straps come from the prepared, already-cropped catalog written by prepare-straps.ts.
@@ -167,10 +186,32 @@ async function main() {
         // only when the two segments cannot be told apart.
         const rawSegments = await splitStrapSegments(strapBuffer);
         const segments = rawSegments;
-        const draft = segments
-            ? await buildSegmentedDraft(segments, faceBuffer)
-            : await buildDraftComposite(strapBuffer, faceBuffer);
+
+        // Assessed BEFORE the guard is charged. A pair built from a draft that fails the standard
+        // teaches the model the fault, and a call already made cannot be un-billed.
+        const verdict = segments
+            ? await assessSegments(segments, faceBuffer)
+            : { ok: false, reasons: ['the render could not be split into two segments'] };
+        if (!verdict.ok) {
+            console.warn(`  ⏭  ${combo.id} — ${verdict.reasons[0]}`);
+            skippedBelowStandard++;
+            continue;
+        }
+
+        const draft = await buildSegmentedDraft(segments!, faceBuffer);
         await writeFile(path.join(PAIR_DIR, `${combo.id}_start.png`), draft);
+
+        if (!dryRun) {
+            try {
+                guard.charge(unitCost, `PRO ${combo.id}`);
+            } catch (err) {
+                if (err instanceof SpendExceededError) {
+                    console.warn(`\n🛑 ${err.message}`);
+                    break;
+                }
+                throw err;
+            }
+        }
 
         if (dryRun) {
             generatedThisRun++;
@@ -201,6 +242,9 @@ async function main() {
         console.log(`  ✅ ${combo.id}  (${guard.summary()})`);
     }
 
+    if (skippedBelowStandard > 0) {
+        console.log(`\nℹ️  skipped ${skippedBelowStandard} combo(s) whose draft does not meet the standard — those renders need redoing`);
+    }
     if (skippedForColour > 0) {
         console.log(`\nℹ️  skipped ${skippedForColour} combo(s) whose clean strap render drifted in colour`);
     }

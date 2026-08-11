@@ -2,7 +2,9 @@ import { readFile, writeFile, mkdir, rm, readdir, access } from 'node:fs/promise
 import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
-import { trimSpringBarPins, measureSegment } from '../../src/lib/segmentFit';
+import { trimSpringBarPins, measureSegment, measureFace } from '../../src/lib/segmentFit';
+import { removeWhiteBackground } from '../../src/lib/removeWhiteBackground';
+import { assessDraft } from '../../src/lib/draftStandard';
 import { buildSegmentedDraft, computeSegmentedLayout } from '../../src/lib/segmentedDraft';
 import sharpMeta from 'sharp';
 import { getObjectBuffer } from '../../src/lib/aws';
@@ -43,6 +45,7 @@ async function main() {
 
     let written = 0;
     let unsplittable = 0;
+    let passed = 0;
     for (const [index, file] of files.entries()) {
         const productId = Number(file.replace('.webp', ''));
         const combo = byProduct.get(productId);
@@ -63,14 +66,23 @@ async function main() {
             measureSegment(await trimSpringBarPins(segments.tail, 'top'), 'top'),
         ]);
         const buckleShare = Math.round((b.aspect / (b.aspect + t.aspect)) * 100);
-        const faceMeta = await sharpMeta(face).metadata();
+        const prepared = await sharpMeta(await removeWhiteBackground(face))
+            .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 }, threshold: 0 }).png().toBuffer();
+        const faceMeta = await sharpMeta(prepared).metadata();
+        const facePoints = await measureFace(prepared);
         const { caseScale } = computeSegmentedLayout({
             caseAspect: faceMeta.height! / faceMeta.width!,
             buckleAspect: b.aspect,
             tailAspect: t.aspect,
+            strapPerCase: facePoints.lugGap === null ? undefined : facePoints.lugGap / facePoints.width,
         });
-        // Below 1 means the strap was too long for a full-size watch, which is the render's fault.
-        const fit = caseScale < 0.995 ? ` · WATCH SHRUNK TO ${Math.round(caseScale * 100)}%` : '';
+        const verdict = assessDraft({
+            buckleShare: b.aspect / (b.aspect + t.aspect),
+            caseScale,
+            lugGapRead: facePoints.lugGap !== null,
+        });
+        if (verdict.ok) passed++;
+        const fit = verdict.ok ? ' · PASS' : ` · FAIL: ${verdict.reasons[0].slice(0, 64)}`;
 
         const cropPath = path.join(OUT_DIR, 'straps', `${productId}.png`);
         const source = (await exists(cropPath))
@@ -108,7 +120,8 @@ async function main() {
 
     console.log(`✅ ${written} assembled drafts → ${PICK_DIR}`);
     if (unsplittable) console.warn(`   ⚠️ ${unsplittable} renders could not be split and were skipped`);
-    console.log('   Left = catalog photo, right = the watch the model will be asked to finish.');
+    console.log(`   ${passed}/${written} meet the standard (src/lib/draftStandard.ts); the rest name their fault on the label.
+   Left = catalog photo, right = the watch the model will be asked to finish.`);
     console.log('   DAO-NGUOC = upside down · GAN-DUNG = close but not right · delete = wrong colour or leather.');
     process.exit(0);
 }

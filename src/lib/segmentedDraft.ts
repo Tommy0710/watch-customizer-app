@@ -89,9 +89,12 @@ export function computeSegmentedLayout(input: {
     const needed = fullCaseWidth * heightInCases;
     // Eat into the margin before shrinking anything: a slightly tight crop is a smaller lie than a
     // watch drawn to the wrong size.
-    const roomy = DRAFT_CANVAS_HEIGHT - marginY * 2;
+    //
+    // Scaling to fill the tight box was wrong in the other direction too — it drew the watch up to
+    // 10% OVER full size for straps that merely needed some of the margin, so head size varied by a
+    // quarter across the set. It is one fixed size now, and only ever shrinks, as a rescue.
     const tight = DRAFT_CANVAS_HEIGHT - marginY / 2;
-    const caseScale = needed <= roomy ? 1 : Math.max(MIN_CASE_SCALE, tight / needed);
+    const caseScale = needed <= tight ? 1 : Math.max(MIN_CASE_SCALE, tight / needed);
 
     const caseWidth = Math.round(fullCaseWidth * caseScale);
     const segmentWidth = Math.max(1, Math.round(caseWidth * strapsPerCase));
