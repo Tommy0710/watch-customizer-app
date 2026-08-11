@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import { DRAFT_CANVAS_WIDTH, DRAFT_CANVAS_HEIGHT, DRAFT_MARGIN_RATIO } from './draftComposite';
 import { removeWhiteBackground } from './removeWhiteBackground';
+import { trimSpringBarPins, fitSegmentToSlot } from './segmentFit';
 import type { SplitStrap } from './strapSegments';
 
 // Lays a strap out the way a finished watch actually reads: buckle segment above, case in the
@@ -82,20 +83,18 @@ export function computeSegmentedLayout(input: {
     };
 }
 
-// Fits a segment into its slot by SCALING it, never by cropping.
-//
-// Cropping is what the first version did, and it cut off exactly the wrong thing. Each segment has
-// a spring-bar end — the articulated end that pins into the watch case — and a far end that is the
-// buckle on the short piece or the curved tip on the long piece. The slot is much shorter than the
-// full segment, so trimming to length amputated the spring-bar end and left a raw cut across the
-// middle of the leather butting against the case. Both ends carry the product's real shape, so
-// both have to survive; a little lengthwise foreshortening is a far smaller lie than a strap with
-// no visible connection to the watch.
-async function fitSegment(segment: Buffer, width: number, height: number): Promise<Buffer> {
-    return sharp(segment)
-        .resize({ width, height, fit: 'fill' })
-        .png()
-        .toBuffer();
+// Both ends of a segment carry the product's real shape — the spring-bar joint that pins into the
+// case, and the buckle or curved tip at the far end — so neither may be cropped away, and neither
+// may be deformed to make the piece fit. fitSegmentToSlot handles that: it scales uniformly and
+// takes the surplus length out of a band of plain leather. See src/lib/segmentFit.ts.
+async function fitSegment(
+    segment: Buffer,
+    width: number,
+    height: number,
+    role: 'buckle' | 'tail',
+): Promise<Buffer> {
+    const withoutPins = await trimSpringBarPins(segment, role === 'buckle' ? 'bottom' : 'top');
+    return fitSegmentToSlot(withoutPins, width, height, role);
 }
 
 export async function buildSegmentedDraft(
@@ -114,8 +113,8 @@ export async function buildSegmentedDraft(
     const layout = computeSegmentedLayout({ caseAspect: faceMeta.height / faceMeta.width, buckleLengthRatio });
 
     const [buckleLayer, tailLayer, caseLayer] = await Promise.all([
-        fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight),
-        fitSegment(segments.tail, layout.segmentWidth, layout.tailHeight),
+        fitSegment(segments.buckle, layout.segmentWidth, layout.buckleHeight, 'buckle'),
+        fitSegment(segments.tail, layout.segmentWidth, layout.tailHeight, 'tail'),
         sharp(preparedFace)
             .resize({ width: layout.caseWidth, height: layout.caseHeight, fit: 'fill' })
             .png()
