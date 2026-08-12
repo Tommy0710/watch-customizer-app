@@ -101,7 +101,11 @@ async function main() {
     console.log(`\n❌ ${none.length} straps fail on every face:`);
     for (const r of none) console.log(`   ${r.id}  ${r.name}  — ${r.reason}`);
 
-    await writeFile(path.join(OUT_DIR, 'standard-report.json'), JSON.stringify(rows, null, 2));
+    // Named after the folder surveyed. A trial run used to overwrite the live report, which then
+    // reported every strap outside the trial as unknown — and reading that as "these renders no
+    // longer meet the standard" is a mistake worth designing out rather than remembering.
+    const suffix = path.basename(CLEAN_DIR) === 'straps-clean' ? '' : `-${path.basename(CLEAN_DIR)}`;
+    await writeFile(path.join(OUT_DIR, `standard-report${suffix}.json`), JSON.stringify(rows, null, 2));
     process.exit(0);
 }
 
