@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { prepareFace, checkCleanRender, type PreparedFace } from '../../src/lib/renderCheck';
+import { buildStrapLayoutTemplate } from '../../src/lib/strapLayoutTemplate';
 import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
@@ -23,6 +24,9 @@ import type { Combo } from './selectCombos';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const STRAP_DIR = path.join(OUT_DIR, 'straps');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
+// The same two categories StrapSelector filters on. A strap outside them exists in MongoDB but is
+// never clickable, so rendering it would be paying for something no customer can reach.
+const UI_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
 
 const CLEAN_STRAP_PROMPT =
     'Reproduce the watch strap from this photo as a clean studio product image. Copy its leather ' +
@@ -30,42 +34,52 @@ const CLEAN_STRAP_PROMPT =
     'pixel-for-pixel, including any faint colour undertones such as green, blue, or purple patina ' +
     '— never substitute a generic brown or plain black leather. Completely remove the staging: the ' +
     'background surface, any large leather hide or swatch used as a backdrop, any rolled fabric or ' +
-    'cylinder prop the strap is draped over, and all shadows. Show the strap as its two real and ' +
-    'different pieces, laid flat and perfectly vertical, centred, aligned end to end with a gap ' +
-    'between them where a watch case would sit. The upper piece is the short buckle piece: it ' +
-    'carries the single metal buckle at its top end together with the keeper loops, and it has NO ' +
-    'punched holes. The lower piece is the long tail: plain tapered leather with the row of ' +
-    'punched holes and a curved tip, carrying NO buckle and NO keeper loops. The upper piece must ' +
-    'be about two thirds the length of the lower piece. The two pieces are different lengths and ' +
-    'different shapes — never draw the same piece twice, never mirror one piece to make the other, ' +
-    'and never show more than one buckle anywhere in the image. Photograph ' +
+    'cylinder prop the strap is draped over, and all shadows. THE SECOND IMAGE IS A GREY DIAGRAM ' +
+    'OF THE REQUIRED LAYOUT — reproduce its arrangement exactly: two separate pieces side by side, ' +
+    'both perfectly vertical, both starting at the same top edge, the left piece about two thirds ' +
+    'the length of the right piece. Take only the arrangement and the proportions from the ' +
+    'diagram; take the leather, colour and hardware from the first image. The left piece is the ' +
+    'short buckle piece: it carries the single metal buckle together with the keeper loops, and it ' +
+    'has NO punched holes. The right piece is the long tail: plain tapered leather with the row of ' +
+    'punched holes and a curved tip, carrying NO buckle and NO keeper loops. Never draw the same ' +
+    'piece twice, never mirror one piece to make the other, and never show more than one buckle ' +
+    'anywhere in the image. Photograph ' +
     'top-down in sharp 8k focus with soft professional studio lighting on a pure solid white ' +
     'background. Do not add a watch case, dial, or any other object.';
 
-// The four sentences above about the two pieces being different replace a single line that only
-// said "the buckle segment must be clearly shorter than the holes segment". Measured across the 74
-// renders that line produced, 54 came back as the SAME piece drawn twice — each half carrying both
-// a buckle and a row of holes, one of them mirrored — which is 73% of the catalog failing the
-// standard for one reason. The old wording asked for a proportion but never forbade the duplicate,
-// so this names the fault instead of restating the goal.
+// The layout is now shown rather than described, because describing it failed twice over.
+//
+// This prompt asked for a buckle piece "clearly shorter than the holes segment" and 54 of 74
+// renders came back with the halves the same length. It also asked for the pieces stacked one
+// above the other, and every render placed them side by side instead. Two explicit instructions,
+// both ignored. Since the splitter reads a vertical gutter, side by side is what is wanted anyway,
+// so the wording now matches reality and a diagram carries the proportion that words could not.
+//
+// The sentences forbidding a second buckle are kept: they were added when the fault was thought to
+// be a duplicated piece, and while that turned out to be a symptom rather than the cause, naming a
+// failure the renderer demonstrably has is worth the tokens.
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
-// PRO draws the strap correctly roughly half the time and draws the same piece twice the rest of
-// the time, and which one you get is a property of the seed rather than of the strap. Measured on
-// the 8-strap trial of the corrected prompt: 4 came back correct on the first attempt.
+// Retrying is worth very little on its own, and it is worth recording why rather than deleting it
+// quietly. It was added believing a bad render was a roll of the dice. Measured over 10 straps it
+// bought ONE usable render for 32 PRO calls, and four seeds on 25544 returned buckle shares of
+// 51%, 51%, 51% and 50% — the same answer four times, which is not what randomness looks like.
 //
-// So the render is not something to hope for — it is something to check and ask for again. The
-// check is free and already written, which turns a coin flip into a near-certainty: at ~45% per
-// attempt, four attempts leave under a 10% chance of a strap having no usable render. That is what
-// "always comes out right" has to mean in practice, since the alternative is a human looking at
-// every one of 443 straps.
-const MAX_ATTEMPTS = 4;
+// The fault follows the source photo, so a second attempt on the same input mostly buys the same
+// failure again. Retries are kept because they cost nothing when the first attempt succeeds and
+// they do catch the occasional genuine wobble, but the number is low on purpose: spending four
+// calls per strap to move a 3% chance is how the last $2.56 went.
+const MAX_ATTEMPTS = 2;
 // Judging against a handful of faces rather than all 114: the full sweep is what the standard
 // report is for, and paying for it inside a retry loop would multiply the wait by 20 for a verdict
 // that barely moves. Faces are sampled evenly across the library rather than taken from the front,
 // which would otherwise draw them all from one brand folder.
 const FACE_SAMPLE = 8;
+
+function flag(name: string): boolean {
+    return process.argv.includes(`--${name}`);
+}
 
 function arg(name: string, fallback: string): string {
     const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -139,6 +153,27 @@ async function main() {
         if (!byProduct.has(combo.productId)) byProduct.set(combo.productId, combo);
     }
 
+    // --all reads the real catalog instead of the 96-product sample the dataset was built from.
+    // Every cost estimate drawn from combos.json understates the job by a factor of four and a
+    // half: 443 straps are clickable in the UI, and a pre-launch run has to cover all of them.
+    if (flag('all')) {
+        const { getDatabaseProducts } = await import('../../src/lib/woocommerce');
+        const visible = (await getDatabaseProducts())
+            .filter((p) => p.categories.some((c) => UI_CATEGORIES.includes(c.name)));
+        for (const p of visible) {
+            if (byProduct.has(p.id) || !p.image) continue;
+            // Only the fields this script reads are real; the rest exist to satisfy the Combo type
+            // and are never used here. faceKey in particular is not a claim about this product —
+            // faces are sampled separately below.
+            byProduct.set(p.id, {
+                id: `${p.id}`, productId: p.id, productName: p.name, strapImage: p.image,
+                categories: p.categories.map((c) => c.name), attributes: p.attributes,
+                faceKey: '', faceName: '', bucket: '',
+            });
+        }
+        console.log(`📚 full catalog: ${visible.length} straps visible in the UI`);
+    }
+
     // Evenly spaced through the library so the sample spans brands rather than sitting inside one.
     const faceKeys = [...new Set([...train, ...heldOut].map((c) => c.faceKey))];
     const step = Math.max(1, Math.floor(faceKeys.length / FACE_SAMPLE));
@@ -147,6 +182,8 @@ async function main() {
             .map(async (key) => prepareFace((await getObjectBuffer(key)).buffer)),
     );
     const failed: { id: number; name: string; reason: string }[] = [];
+    // Built once: it is the same diagram for every strap, and it is the same one every time.
+    const layoutTemplate = await buildStrapLayoutTemplate();
 
     await mkdir(outDir, { recursive: true });
     console.log(
@@ -196,7 +233,10 @@ async function main() {
                 prompt: CLEAN_STRAP_PROMPT,
                 resolution: '1 MP',
                 aspect_ratio: '9:16',
-                input_images: [`data:image/png;base64,${source.toString('base64')}`],
+                input_images: [
+                    `data:image/png;base64,${source.toString('base64')}`,
+                    `data:image/png;base64,${layoutTemplate.toString('base64')}`,
+                ],
                 output_format: 'webp',
                 output_quality: 90,
                 safety_tolerance: 5,
