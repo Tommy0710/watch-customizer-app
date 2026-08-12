@@ -20,10 +20,14 @@ import { describeError } from '../lib/reportError';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const PAIR_DIR = path.join(OUT_DIR, 'pairs');
 
-// Replicate publishes no price for flux-2-pro via its API or pricing page, so the real figure has
-// to come off the billing dashboard after a small calibration run. These defaults are deliberate
-// OVER-estimates so the guard trips early rather than late; pass --unit-cost once confirmed.
-const ASSUMED_COST = { '1 MP': 0.03, '2 MP': 0.06 } as const;
+// Replicate publishes no price for flux-2-pro anywhere reachable — not the pricing page, not the
+// API, not response headers (checked directly, 2026-08-12). $0.03/$0.06 sat here as "deliberate
+// over-estimates" for months without ever being checked against a real invoice. They were not
+// over-estimates: reconstructed from an account balance that went from $20 to $1 over 113 real
+// calls, the true price is closer to $0.17/call regardless of resolution. That gap is why the
+// guard's "$X of $Y" never once matched what Replicate actually charged. $0.20 is the new
+// deliberate over-estimate — verify against the billing dashboard before trusting it either.
+const ASSUMED_COST = { '1 MP': 0.20, '2 MP': 0.20 } as const;
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 

@@ -136,7 +136,11 @@ async function runWithRetry(input: Record<string, unknown>, attempts = 3): Promi
 }
 
 async function main() {
-    const unitCost = Number(arg('unit-cost', '0.03'));
+    // See the note by ASSUMED_COST in generate-pairs.ts: $0.03-0.08 were unverified guesses used
+    // here for months. Reconstructed from a real $20→$1 balance drop over 113 calls on 2026-08-12,
+    // the true price is closer to $0.17/call. $0.20 is a deliberate over-estimate, not a measurement
+    // — confirm against the billing dashboard before spending against it.
+    const unitCost = Number(arg('unit-cost', '0.20'));
     const limit = Number(arg('limit', '9999'));
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.70')), label: 'clean-straps' });
 
