@@ -2,6 +2,7 @@ import { readFile, writeFile, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
 import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Gate between render-clean-straps.ts and the training set. FLUX-2-PRO reproduces a strap's
 // colour unreliably when asked to re-render it — a navy strap came back brown in the pilot's
@@ -76,6 +77,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

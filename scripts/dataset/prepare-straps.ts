@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { cropToStrap } from '../../src/lib/cropStrap';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // One-time catalog preparation: crop every strap product photo down to the strap itself and keep
 // the result on disk. Detection is the only step that talks to an outside service, and doing it
@@ -93,6 +94,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

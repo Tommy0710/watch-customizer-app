@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
+import { describeError } from '../lib/reportError';
 
 // Packs approved pairs into the layout replicate/fast-flux-kontext-trainer expects: a flat zip of
 // NNN_start.jpg / NNN_end.jpg, no captions (the shared prompt instruction covers every pair).
@@ -78,6 +79,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

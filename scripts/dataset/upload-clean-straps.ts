@@ -9,6 +9,7 @@ import { assessDraft } from '../../src/lib/draftStandard';
 import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { getObjectBuffer, putCleanStrapRender } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Publishes the clean strap renders that meet the standard to S3, so /api/generate can reach them.
 //
@@ -96,6 +97,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

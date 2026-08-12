@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments, metalScore } from '../../src/lib/strapSegments';
+import { describeError } from '../lib/reportError';
 
 // Diagnostic: shows the clean render beside the two halves splitStrapSegments produced and which
 // one it called the buckle. Orientation and buckle-side errors in the assembled draft are invisible
@@ -32,4 +33,4 @@ async function main() {
       .composite(tiles).jpeg({ quality: 90 }).toFile(path.join(DEST, `dissect-${id}.jpg`));
   }
 }
-main().catch((e) => { console.error('❌', e); process.exit(1); });
+main().catch((e) => { console.error('❌', describeError(e)); process.exit(1); });

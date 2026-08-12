@@ -7,6 +7,7 @@ import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColou
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Turns each staged catalog photo into a canonical studio render of the same strap: laid
 // vertically, isolated on white, no props.
@@ -174,6 +175,27 @@ async function main() {
         console.log(`📚 full catalog: ${visible.length} straps visible in the UI`);
     }
 
+    // --sample=N estimates the real pass rate before committing to the whole catalog. The 10 straps
+    // measured so far were deliberately the hardest — each had already failed twice — so 6 of 9 is
+    // a floor rather than an average, and the difference decides whether a full run is worth $47.
+    // Selection is deterministic so a repeat run measures the same straps rather than new luck.
+    const sample = Number(arg('sample', '0'));
+    if (sample > 0) {
+        const candidates: number[] = [];
+        for (const id of byProduct.keys()) {
+            if (!(await exists(path.join(outDir, `${id}.webp`)))) candidates.push(id);
+        }
+        candidates.sort((a, b) => a - b);
+        let state = 19826;
+        for (let i = candidates.length - 1; i > 0; i--) {
+            state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+            const j = Math.floor((state / 0x100000000) * (i + 1));
+            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+        for (const id of candidates.slice(0, sample)) only.add(id);
+        console.log(`🎲 sampling ${Math.min(sample, candidates.length)} of ${candidates.length} straps with no render yet`);
+    }
+
     // Evenly spaced through the library so the sample spans brands rather than sitting inside one.
     const faceKeys = [...new Set([...train, ...heldOut].map((c) => c.faceKey))];
     const step = Math.max(1, Math.floor(faceKeys.length / FACE_SAMPLE));
@@ -291,6 +313,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

@@ -1,6 +1,7 @@
 import { readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // A static HTML page opened straight from disk — no dev server, no route in the app, so the frozen
 // customer UI stays untouched. Every image is a local relative path, so it works offline.
@@ -145,6 +146,6 @@ render();
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

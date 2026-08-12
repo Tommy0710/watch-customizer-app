@@ -15,6 +15,7 @@ import { classifyStrap, buildStrapProfileClause } from '../../src/lib/strapProfi
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { SplitStrap } from '../../src/lib/strapSegments';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const PAIR_DIR = path.join(OUT_DIR, 'pairs');
@@ -266,6 +267,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

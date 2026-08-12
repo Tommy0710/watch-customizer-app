@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { KONTEXT_PROMPT_INSTRUCTION } from '../../src/lib/segmentedDraft';
+import { describeError } from '../lib/reportError';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 
@@ -70,6 +71,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

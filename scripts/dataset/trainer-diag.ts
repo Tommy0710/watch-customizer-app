@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
+import { describeError } from '../lib/reportError';
 
 // Isolates the cause of the blanket 500 on create-training.
 //
@@ -85,6 +86,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err instanceof Error ? err.message : err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

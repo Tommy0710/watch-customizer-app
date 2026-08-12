@@ -6,6 +6,7 @@ import { buildSegmentedDraft, KONTEXT_PROMPT_INSTRUCTION } from '../../src/lib/s
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Runs the trained LoRA over combos it has never seen and puts its output next to PRO's on the
 // same inputs. Latency is recorded per call, cold start included, because speed is one of the
@@ -114,6 +115,6 @@ ${rows}`);
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
 import { TRIGGER_WORD } from './styleDataset';
+import { describeError } from '../lib/reportError';
 
 // Trains the style LoRA on ostris/flux-dev-lora-trainer — the pair-based Kontext trainer this
 // project was designed around returns 500 on every version, so the approach moved to a style LoRA
@@ -76,6 +77,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err instanceof Error ? err.message : err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

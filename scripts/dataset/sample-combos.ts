@@ -3,6 +3,7 @@ import path from 'node:path';
 import { getDatabaseProducts } from '../../src/lib/woocommerce';
 import { getDatabaseFaces } from '../../src/lib/aws';
 import { selectCombos, type Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
@@ -65,6 +66,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

@@ -1,6 +1,7 @@
 import { readdir, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import { describeError } from '../lib/reportError';
 
 // cropToStrap hands back the ORIGINAL buffer when detection fails, and older runs saved that
 // fallback to disk — a staged prop shot sitting where a cropped strap should be, which the next
@@ -32,4 +33,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { trimSpringBarPins, measureSegment } from '../../src/lib/segmentFit';
 import { TARGET_BUCKLE_SHARE, MAX_BUCKLE_SHARE_DRIFT } from '../../src/lib/draftStandard';
+import { describeError } from '../lib/reportError';
 
 // Why do most renders fail the standard for the same reason?
 //
@@ -100,4 +101,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

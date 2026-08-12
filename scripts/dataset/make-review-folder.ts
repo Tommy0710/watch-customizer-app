@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Builds a folder of side-by-side JPEGs — catalog photo on the left, PRO's assembled result on the
 // right — one per training pair. Reviewing then needs no browser and no keyboard shortcuts: open
@@ -87,6 +88,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

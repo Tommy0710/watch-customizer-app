@@ -3,6 +3,7 @@ import path from 'node:path';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { CLEAN_STRAP_PREFIX } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Why did a Combine click fall back to PRO? Every reason lives on one of three lists: the env vars
 // the engine needs, the renders actually published to S3, and whether those renders still meet the
@@ -45,4 +46,4 @@ async function main() {
     }
     process.exit(0);
 }
-main().catch((e) => { console.error('❌', e); process.exit(1); });
+main().catch((e) => { console.error('❌', describeError(e)); process.exit(1); });

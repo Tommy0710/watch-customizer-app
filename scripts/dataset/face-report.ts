@@ -5,6 +5,7 @@ import { measureFace } from '../../src/lib/segmentFit';
 import { removeWhiteBackground } from '../../src/lib/removeWhiteBackground';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // The standard has two independent ways to fail and only one of them is the strap's fault.
 // "could not read the gap between the lugs" is a fact about the FACE photo, so it drags every
@@ -32,4 +33,4 @@ async function main() {
     if (unreadable.length > 15) console.log(`   ... and ${unreadable.length - 15} more`);
     process.exit(0);
 }
-main().catch((e) => { console.error('❌', e); process.exit(1); });
+main().catch((e) => { console.error('❌', describeError(e)); process.exit(1); });

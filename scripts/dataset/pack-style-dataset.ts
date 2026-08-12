@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import { TRIGGER_WORD, caption } from './styleDataset';
+import { describeError } from '../lib/reportError';
 
 // Packs the approved "after" images as a style dataset for ostris/flux-dev-lora-trainer.
 //
@@ -68,6 +69,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

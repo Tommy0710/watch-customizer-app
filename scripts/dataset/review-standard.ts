@@ -9,6 +9,7 @@ import { assessDraft } from '../../src/lib/draftStandard';
 import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Sign-off review: only the drafts that meet the standard, at full resolution.
 //
@@ -142,6 +143,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

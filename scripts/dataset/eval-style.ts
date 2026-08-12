@@ -7,6 +7,7 @@ import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import { TRIGGER_WORD } from './styleDataset';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Runs the trained style LoRA over combos it has never seen and puts its output next to PRO's on
 // the same inputs. Latency is recorded per call, cold start included, because speed was one of the
@@ -142,6 +143,6 @@ ${sections}`);
 }
 
 main().catch((err) => {
-    console.error('❌', err instanceof Error ? err.message : err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

@@ -10,6 +10,7 @@ import { buildSegmentedDraft, computeSegmentedLayout } from '../../src/lib/segme
 import sharpMeta from 'sharp';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Review the ASSEMBLED DRAFT, not the bare strap render.
 //
@@ -143,4 +144,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

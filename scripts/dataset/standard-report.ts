@@ -9,6 +9,7 @@ import { assessDraft } from '../../src/lib/draftStandard';
 import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
 import { getObjectBuffer } from '../../src/lib/aws';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Which straps can actually be served, by name, and how many strap-x-face pairs that comes to.
 //
@@ -109,4 +110,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

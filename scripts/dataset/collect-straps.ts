@@ -1,5 +1,6 @@
 import { readdir, readFile, writeFile, unlink, access } from 'node:fs/promises';
 import path from 'node:path';
+import { describeError } from '../lib/reportError';
 
 // Reads the four verdicts a reviewer can express in the review folder:
 //
@@ -68,4 +69,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

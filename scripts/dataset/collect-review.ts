@@ -1,5 +1,6 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { describeError } from '../lib/reportError';
 
 // Turns whatever is left in review-pick/ back into approved.json. Deleting a file there is the
 // reject action, so the pairs that survive are the approved set.
@@ -47,6 +48,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

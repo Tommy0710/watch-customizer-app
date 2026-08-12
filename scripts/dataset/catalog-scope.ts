@@ -1,4 +1,5 @@
 import { getDatabaseProducts, type Product } from '../../src/lib/woocommerce';
+import { describeError } from '../lib/reportError';
 
 // How many straps a full pre-launch render actually has to cover. The dataset pipeline was built
 // from a 96-product sample, so every cost estimate drawn from it understates the real catalog.
@@ -15,4 +16,4 @@ async function main() {
     console.log(`${visible.length - withImage.length} have no photo — nothing to render`);
     process.exit(0);
 }
-main().catch((e) => { console.error('❌', e); process.exit(1); });
+main().catch((e) => { console.error('❌', describeError(e)); process.exit(1); });

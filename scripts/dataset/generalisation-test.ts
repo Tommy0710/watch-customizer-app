@@ -7,6 +7,7 @@ import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColou
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // Does the LoRA hold a strap's colour on straps it has NEVER seen?
 //
@@ -172,6 +173,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err instanceof Error ? err.message : err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

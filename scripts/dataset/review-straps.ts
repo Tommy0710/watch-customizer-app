@@ -3,6 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments, buckleAsymmetry } from '../../src/lib/strapSegments';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // A Finder review pass over the CLEAN STRAP RENDERS, upstream of the pair review.
 //
@@ -97,6 +98,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

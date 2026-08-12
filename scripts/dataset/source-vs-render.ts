@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import { describeError } from '../lib/reportError';
 
 // The retry loop assumed the duplicated render was a roll of the dice. Four seeds on 25544 returned
 // 51%, 51%, 51%, 50% — near-identical, which is not what randomness looks like. If the fault tracks
@@ -27,4 +28,4 @@ async function main() {
     console.log(`pairs (source, render) for ${ids.join(', ')} → out/source-vs-render.jpg`);
     process.exit(0);
 }
-main().catch((e) => { console.error('❌', e); process.exit(1); });
+main().catch((e) => { console.error('❌', describeError(e)); process.exit(1); });

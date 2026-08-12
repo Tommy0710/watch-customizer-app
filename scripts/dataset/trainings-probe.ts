@@ -1,3 +1,4 @@
+import { describeError } from '../lib/reportError';
 // Narrows the create-training 500 to either "Replicate's trainings API is unwell" or
 // "this account is blocked from training".
 //
@@ -53,4 +54,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });

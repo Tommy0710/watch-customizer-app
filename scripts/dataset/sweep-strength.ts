@@ -8,6 +8,7 @@ import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import { TRIGGER_WORD } from './styleDataset';
 import type { Combo } from './selectCombos';
+import { describeError } from '../lib/reportError';
 
 // prompt_strength is the one knob that decides whether this approach works at all. Too low and the
 // LoRA barely touches the draft, leaving the pasted-on look; too high and img2img destroys the
@@ -119,6 +120,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('❌', err instanceof Error ? err.message : err);
+    console.error('❌', describeError(err));
     process.exit(1);
 });

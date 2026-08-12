@@ -3,6 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { trimSpringBarPins, measureSegment } from '../../src/lib/segmentFit';
+import { describeError } from '../lib/reportError';
 
 // The survey says 16498's buckle half is as long as its tail; the picture says the two halves are
 // proportioned like every other strap. One of them is wrong, and the answer decides whether 59
@@ -56,4 +57,4 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((err) => { console.error('❌', err); process.exit(1); });
+main().catch((err) => { console.error('❌', describeError(err)); process.exit(1); });
