@@ -100,6 +100,9 @@ export default function CombineSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           strapImage: selectedStrap.image, // URL (e.g. https://cdn.handdn.com/...)
+          // Only used by the LoRA engine, to find this strap's clean studio render. The PRO path
+          // ignores it and works from the catalog photo exactly as before.
+          strapId: selectedStrap.id,
           // Reuse a previously server-cropped face (from an earlier Combine with the same photo)
           // when available, so /api/generate can skip re-running watch-face detection.
           faceImage: cachedFaceCrop ?? uploadedFace,

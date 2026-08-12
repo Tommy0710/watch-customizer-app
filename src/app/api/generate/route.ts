@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getObjectBuffer } from '@/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '@/lib/strapProfile';
 import { PRO_ASSEMBLY_PROMPT } from '@/lib/proPrompt';
+import { generateWithLora } from '@/lib/loraEngine';
 
 const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
@@ -119,7 +120,7 @@ async function cropToWatchFace(faceBuffer: Buffer): Promise<Buffer> {
 
 export async function POST(request: Request) {
     try {
-        const { strapImage, faceImage, faceAlreadyCropped = false, strapName = '', strapCategories = [], strapAttributes = [] } = await request.json();
+        const { strapImage, faceImage, faceAlreadyCropped = false, strapName = '', strapCategories = [], strapAttributes = [], strapId } = await request.json();
 
         if (!strapImage || !faceImage) {
             return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
@@ -157,6 +158,31 @@ export async function POST(request: Request) {
         // crop succeeded) — false on any fallback path or when detection was skipped entirely.
         // Used to decide whether to hand the cropped result back to the client for caching.
         const didCropJustNow = faceBuffer !== rawFaceBuffer;
+
+        // 1c. The trained style LoRA, when it is switched on. It assembles the watch itself from a
+        // clean strap render rather than asking a general model to work it out, so it is roughly 5x
+        // faster and 3x cheaper — but it can only run on straps that have a clean render on file,
+        // and it is new. Any reason it cannot run falls through to PRO, which has always worked.
+        if ((process.env.GENERATE_ENGINE ?? 'pro') === 'lora') {
+            const attempt = await generateWithLora({
+                replicate,
+                strapId,
+                faceBuffer,
+                productName: strapName,
+            });
+            if (attempt.ok) {
+                console.log(`✅ LoRA finished in ${attempt.seconds.toFixed(1)}s${attempt.assessment.ok ? '' : ' (draft below standard — see warning above)'}`);
+                return NextResponse.json({
+                    success: true,
+                    imageUrl: attempt.imageUrl,
+                    engine: 'lora',
+                    seconds: attempt.seconds,
+                    draftMeetsStandard: attempt.assessment.ok,
+                    ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
+                });
+            }
+            console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
+        }
 
         // 2. Read the watch strap image
         let strapBuffer: Buffer;
@@ -328,6 +354,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
+            engine: 'pro',
             resultImage: imageUrl,
             // Hand the freshly-cropped face back to the client so it can cache and resend it on
             // the next Combine (different strap, same photo) instead of paying for detection again.
