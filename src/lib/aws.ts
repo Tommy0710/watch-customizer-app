@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import clientPromise from '@/lib/mongodb';
 
@@ -98,6 +98,22 @@ export async function getObjectBuffer(key: string): Promise<{ buffer: Buffer; co
 // Small resized copy for the picker grid — the originals can be several MB each,
 // which is wasteful to ship for a ~100px thumbnail. /api/generate always uses the
 // full-resolution getObjectBuffer above, never this, so combine quality is unaffected.
+// Clean studio renders of the straps live in the same bucket as the face library, under their own
+// prefix and keyed by product id. They are generated once per product and then read on every
+// generation, so they belong somewhere the serverless runtime can actually reach — reading them
+// off the dataset folder only ever worked on a developer's machine.
+export const CLEAN_STRAP_PREFIX = process.env.AWS_S3_CLEAN_STRAP_PREFIX || 'straps-clean/';
+
+export function cleanStrapKey(productId: number): string {
+  return `${CLEAN_STRAP_PREFIX}${productId}.webp`;
+}
+
+export async function putCleanStrapRender(productId: number, body: Buffer): Promise<string> {
+  const key = cleanStrapKey(productId);
+  await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: 'image/webp' }));
+  return key;
+}
+
 export async function getThumbnailBuffer(key: string, width = 240): Promise<{ buffer: Buffer; contentType: string }> {
   const { buffer } = await getObjectBuffer(key);
   const resized = await sharp(buffer)

@@ -8,6 +8,7 @@ import { trimSpringBarPins, measureSegment, measureFace } from './segmentFit';
 import { removeWhiteBackground } from './removeWhiteBackground';
 import { assessDraft, type DraftAssessment } from './draftStandard';
 import { buildLoraPrompt } from './loraPrompt';
+import { getObjectBuffer, cleanStrapKey } from './aws';
 
 // Serving the trained style LoRA, using the SAME draft builder the training pairs were made with.
 //
@@ -25,15 +26,21 @@ export const LORA_PROMPT_STRENGTH = 0.65;
 // on the same choices should not get a different watch.
 export const LORA_SEED = 19826;
 
-// Clean studio renders of each strap, by product id. Production cannot use the raw catalog photo:
-// measured on 23 of them, ZERO can be split into two segments, because catalog shots are staged on
-// props at an angle against a coloured background. The splitter needs the strap laid flat on white,
-// which is what these renders are.
+// TEST SCAFFOLD — NOT THE PRODUCTION DESIGN. Delete this, upload-clean-straps.ts, and the
+// straps-clean/ prefix in S3 before this path goes live.
 //
-// Reading them off disk is a development arrangement, not the finished one — they belong in S3
-// beside the face library, keyed by product id, generated once per product and cached. Wiring that
-// up is a separate job; this unblocks testing against the renders that already exist.
-const CLEAN_STRAP_DIR = process.env.CLEAN_STRAP_DIR ?? path.join(process.cwd(), 'scripts/dataset/out/straps-clean');
+// The app's rule is that a strap is assembled from its catalog photo, background and all, with no
+// pre-cleaning step; that rule is what the model has to be trained to satisfy. This engine breaks
+// it: it needs the strap laid flat on white, because measured on 23 catalog crops ZERO can be split
+// into two segments — catalog shots are staged on props, at an angle, against a coloured
+// background. So each strap is pre-rendered clean and published to S3.
+//
+// That is a way to test the serving path and judge the model's speed and realism today. It is not
+// a way to ship. A model that only works on inputs a separate pipeline prepared for it has not
+// learnt the job, and every strap it cannot be given falls back to PRO anyway.
+//
+// CLEAN_STRAP_DIR reads from a local folder instead, for working offline against the dataset.
+const CLEAN_STRAP_DIR = process.env.CLEAN_STRAP_DIR;
 
 export type LoraOutcome =
     | { ok: true; imageUrl: string; assessment: DraftAssessment; seconds: number }
@@ -42,7 +49,9 @@ export type LoraOutcome =
 async function loadCleanStrapRender(strapId: number | undefined): Promise<Buffer | null> {
     if (!strapId) return null;
     try {
-        return await readFile(path.join(CLEAN_STRAP_DIR, `${strapId}.webp`));
+        if (CLEAN_STRAP_DIR) return await readFile(path.join(CLEAN_STRAP_DIR, `${strapId}.webp`));
+        const { buffer } = await getObjectBuffer(cleanStrapKey(strapId));
+        return buffer;
     } catch {
         return null;
     }
@@ -57,10 +66,8 @@ function firstOutputUrl(out: unknown): string {
     throw new Error('Unexpected model output shape from the LoRA');
 }
 
-// Runs the draft through the same standard the dataset review applies. It never blocks generation —
-// a customer waiting on a Combine click gets a picture either way — but it puts the reason in the
-// logs, so a disappointing result can be traced to a strap render that was never good enough
-// rather than being blamed on the model.
+// Runs the draft through the same standard the dataset review applies, so a strap is judged in
+// production by exactly the rules a reviewer signed off on.
 async function assess(
     segments: { buckle: Buffer; tail: Buffer },
     faceBuffer: Buffer,
@@ -115,8 +122,11 @@ export async function generateWithLora(options: {
         buildSegmentedDraft(segments, options.faceBuffer),
         assess(segments, options.faceBuffer),
     ]);
+    // Standing down rather than generating anyway. A below-standard draft produces a watch a
+    // reviewer would reject, and PRO — slower and dearer, but proven — produces one they would not.
+    // A customer waiting on a Combine click should get the better picture, not the cheaper one.
     if (!assessment.ok) {
-        console.warn(`⚠️ draft is below standard but generating anyway — ${assessment.reasons.join('; ')}`);
+        return { ok: false, reason: `draft is below standard — ${assessment.reasons.join('; ')}` };
     }
 
     const startedAt = Date.now();
