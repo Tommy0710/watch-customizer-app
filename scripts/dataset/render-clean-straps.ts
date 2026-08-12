@@ -1,6 +1,9 @@
 import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import Replicate from 'replicate';
+import { prepareFace, checkCleanRender, type PreparedFace } from '../../src/lib/renderCheck';
+import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColour';
+import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
 
@@ -48,6 +51,22 @@ const CLEAN_STRAP_PROMPT =
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
+// PRO draws the strap correctly roughly half the time and draws the same piece twice the rest of
+// the time, and which one you get is a property of the seed rather than of the strap. Measured on
+// the 8-strap trial of the corrected prompt: 4 came back correct on the first attempt.
+//
+// So the render is not something to hope for — it is something to check and ask for again. The
+// check is free and already written, which turns a coin flip into a near-certainty: at ~45% per
+// attempt, four attempts leave under a 10% chance of a strap having no usable render. That is what
+// "always comes out right" has to mean in practice, since the alternative is a human looking at
+// every one of 443 straps.
+const MAX_ATTEMPTS = 4;
+// Judging against a handful of faces rather than all 114: the full sweep is what the standard
+// report is for, and paying for it inside a retry loop would multiply the wait by 20 for a verdict
+// that barely moves. Faces are sampled evenly across the library rather than taken from the front,
+// which would otherwise draw them all from one brand folder.
+const FACE_SAMPLE = 8;
+
 function arg(name: string, fallback: string): string {
     const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
     return hit ? hit.slice(name.length + 3) : fallback;
@@ -57,18 +76,30 @@ async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
 }
 
-// The pre-crop is a helper, not a prerequisite. CLEAN_STRAP_PROMPT already instructs PRO to strip
-// the backdrop, hides, and props itself, and three pilot straps that were never cropped still
-// produced renders that passed the colour check and yielded usable pairs. Since the crop depends
-// on a rate-limited free tier that throttles to a few images per minute, waiting on it would cost
-// hours for a step that only makes PRO's job marginally easier.
+// The raw catalog photo, never the pre-crop.
+//
+// The crop was believed to make PRO's job easier. It does the opposite, and the split is total:
+// of the 74 renders made so far, the 19 built from a pre-crop pass the standard 0 times, while the
+// 55 built from the raw photo pass 19 times. Looking at those 19 crops explains it — every one is
+// a detail shot, a few inches of strap draped over an arm or a leather hide, with the strap never
+// visible end to end. PRO cannot copy a proportion it was never shown, so it invents one, and what
+// it invents is two pieces of equal length.
+//
+// This is also why re-rendering with a new seed did nothing: four seeds on 25544 returned buckle
+// shares of 51%, 51%, 51% and 50%. The fault follows the source photo, not the dice.
 async function loadSource(productId: number, catalogUrl: string): Promise<Buffer> {
-    const cropped = path.join(STRAP_DIR, `${productId}.png`);
-    if (await exists(cropped)) return readFile(cropped);
-
     const res = await fetch(catalogUrl);
     if (!res.ok) throw new Error(`Could not download catalog photo for ${productId} (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
+}
+
+// Colour is the one thing the pre-crop is still good for. A detail shot is useless for proportion
+// but excellent for hue: it is nothing but leather, where the raw photo averages in props and
+// backdrops. So the crop stays in use here and only here.
+async function loadColourSource(productId: number, catalogUrl: string): Promise<Buffer> {
+    const cropped = path.join(STRAP_DIR, `${productId}.png`);
+    if (await exists(cropped)) return readFile(cropped);
+    return Buffer.from(await (await fetch(catalogUrl)).arrayBuffer());
 }
 
 async function runWithRetry(input: Record<string, unknown>, attempts = 3): Promise<unknown> {
@@ -108,6 +139,15 @@ async function main() {
         if (!byProduct.has(combo.productId)) byProduct.set(combo.productId, combo);
     }
 
+    // Evenly spaced through the library so the sample spans brands rather than sitting inside one.
+    const faceKeys = [...new Set([...train, ...heldOut].map((c) => c.faceKey))];
+    const step = Math.max(1, Math.floor(faceKeys.length / FACE_SAMPLE));
+    const faces: PreparedFace[] = await Promise.all(
+        faceKeys.filter((_, i) => i % step === 0).slice(0, FACE_SAMPLE)
+            .map(async (key) => prepareFace((await getObjectBuffer(key)).buffer)),
+    );
+    const failed: { id: number; name: string; reason: string }[] = [];
+
     await mkdir(outDir, { recursive: true });
     console.log(
         `🧼 ${only.size > 0 ? `${only.size} selected` : `${byProduct.size}`} straps, ` +
@@ -118,7 +158,10 @@ async function main() {
     for (const [productId, combo] of byProduct) {
         if (only.size > 0 && !only.has(productId)) continue;
         const outPath = path.join(outDir, `${productId}.webp`);
-        if (await exists(outPath)) continue;
+        // Naming a strap with --only means redo it: the straps worth naming are the ones whose
+        // existing render is the problem. The file is still only overwritten by a render that
+        // passed, so a redo can improve a strap but never damage one.
+        if (only.size === 0 && await exists(outPath)) continue;
         if (rendered >= limit) {
             console.log(`\n⏸  Reached --limit=${limit}.`);
             break;
@@ -132,28 +175,72 @@ async function main() {
         }
 
         const source = await loadSource(productId, combo.strapImage);
-        const output = await runWithRetry({
-            seed: 19826,
-            prompt: CLEAN_STRAP_PROMPT,
-            resolution: '1 MP',
-            aspect_ratio: '9:16',
-            input_images: [`data:image/png;base64,${source.toString('base64')}`],
-            output_format: 'webp',
-            output_quality: 90,
-            safety_tolerance: 5,
-            prompt_upsampling: false,
-        });
+        const sourceColour = await measureStrapColour(await loadColourSource(productId, combo.strapImage));
 
-        const url = typeof output === 'string' ? output : (output as { url: () => string }).url();
-        const res = await fetch(String(url));
-        if (!res.ok) throw new Error(`Could not download clean strap (${res.status})`);
-        await writeFile(outPath, Buffer.from(await res.arrayBuffer()));
+        let accepted = false;
+        let lastReason = 'no attempt made';
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS && !accepted; attempt++) {
+            if (attempt > 1) {
+                try {
+                    guard.charge(unitCost, `clean strap ${productId} retry ${attempt}`);
+                } catch (err) {
+                    if (err instanceof SpendExceededError) { console.warn(`\n🛑 ${err.message}`); break; }
+                    throw err;
+                }
+            }
 
-        rendered++;
-        console.log(`  ✅ ${productId} ${combo.productName.slice(0, 44)}  (${guard.summary()})`);
+            const output = await runWithRetry({
+                // Varied per attempt: the same seed reproduces the same duplicated render exactly,
+                // so retrying without changing it would just buy the identical failure again.
+                seed: 19826 + attempt - 1,
+                prompt: CLEAN_STRAP_PROMPT,
+                resolution: '1 MP',
+                aspect_ratio: '9:16',
+                input_images: [`data:image/png;base64,${source.toString('base64')}`],
+                output_format: 'webp',
+                output_quality: 90,
+                safety_tolerance: 5,
+                prompt_upsampling: false,
+            });
+
+            const url = typeof output === 'string' ? output : (output as { url: () => string }).url();
+            const res = await fetch(String(url));
+            if (!res.ok) throw new Error(`Could not download clean strap (${res.status})`);
+            const candidate = Buffer.from(await res.arrayBuffer());
+
+            const verdict = await checkCleanRender(
+                candidate,
+                faces,
+                compareStrapColour(sourceColour, await measureStrapColour(candidate)),
+            );
+
+            if (verdict.ok) {
+                // Written only once it has passed. A failing render put on disk would sit there
+                // looking like a rendered strap and quietly serve nothing.
+                await writeFile(outPath, candidate);
+                accepted = true;
+                rendered++;
+                console.log(
+                    `  ✅ ${productId} ${combo.productName.slice(0, 40)} ` +
+                    `— attempt ${attempt}, ${verdict.passes}/${verdict.checked} faces  (${guard.summary()})`,
+                );
+            } else {
+                lastReason = verdict.reasons[0] ?? 'below standard';
+                console.log(`     attempt ${attempt} rejected — ${lastReason.slice(0, 80)}`);
+            }
+        }
+
+        if (!accepted) {
+            failed.push({ id: productId, name: combo.productName, reason: lastReason });
+            console.log(`  ❌ ${productId} ${combo.productName.slice(0, 40)} — gave up after ${MAX_ATTEMPTS}`);
+        }
     }
 
-    console.log(`\n${guard.summary()} — ${rendered} rendered this run`);
+    if (failed.length > 0) {
+        console.log(`\n${failed.length} strap(s) still have no usable render — these keep falling back to PRO:`);
+        for (const f of failed) console.log(`   ${f.id}  ${f.name}  — ${f.reason.slice(0, 70)}`);
+    }
+    console.log(`\n${guard.summary()} — ${rendered} accepted this run`);
     process.exit(0);
 }
 
