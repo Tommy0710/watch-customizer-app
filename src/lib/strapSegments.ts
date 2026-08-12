@@ -198,6 +198,40 @@ async function orientSegment(image: Buffer, role: 'buckle' | 'tail'): Promise<Bu
     return sharp(image).rotate(180).png().toBuffer();
 }
 
+// Which half is the buckle half?
+//
+// Length answers this, not metal. On every real strap the buckle piece is the shorter of the two —
+// it has to be, or the strap could not close — so the shorter half IS the buckle half. metalScore
+// was doing this job and gets it wrong on pale leather, exactly as its own comment warns: measured
+// across 74 renders it mislabelled two grey straps (16498, 75064), handing the long holes-piece
+// over as the buckle. The draft then comes out with the buckle at the bottom.
+//
+// Length only decides when the two halves actually differ in length. Measured over those same 74
+// renders the ratio between the longer and shorter half falls into two clumps with nothing in
+// between — 54 renders sit at 1.00-1.08 (the halves are the same piece drawn twice, a render fault
+// the standard rejects anyway) and 20 sit at 1.18-1.6. This threshold is the empty gap between them.
+export const MIN_LENGTH_RATIO_TO_DECIDE = 1.12;
+
+export function assignHalves<T>(
+    left: { image: T; height: number; metal: number },
+    right: { image: T; height: number; metal: number },
+): { buckle: T; tail: T } {
+    const longer = Math.max(left.height, right.height);
+    const shorter = Math.min(left.height, right.height);
+
+    if (shorter > 0 && longer / shorter >= MIN_LENGTH_RATIO_TO_DECIDE) {
+        return left.height < right.height
+            ? { buckle: left.image, tail: right.image }
+            : { buckle: right.image, tail: left.image };
+    }
+
+    // Halves of equal length carry no length signal, so the old metal comparison still decides.
+    // It is a poor judge, but the alternative here is a coin toss.
+    return left.metal >= right.metal
+        ? { buckle: left.image, tail: right.image }
+        : { buckle: right.image, tail: left.image };
+}
+
 // Splits a two-segment strap render into its buckle half and its holes/tail half, each turned the
 // way up its slot in the assembled draft needs it.
 // Returns null when the image does not look like two separated segments.
@@ -219,8 +253,12 @@ export async function splitStrapSegments(image: Buffer): Promise<SplitStrap | nu
     const left = await sharp(leftRaw).trim(trim).png().toBuffer();
     const right = await sharp(rightRaw).trim(trim).png().toBuffer();
 
+    const [leftMeta, rightMeta] = await Promise.all([sharp(left).metadata(), sharp(right).metadata()]);
     const [leftMetal, rightMetal] = await Promise.all([metalScore(left), metalScore(right)]);
-    const halves = leftMetal >= rightMetal ? { buckle: left, tail: right } : { buckle: right, tail: left };
+    const halves = assignHalves(
+        { image: left, height: leftMeta.height ?? 0, metal: leftMetal },
+        { image: right, height: rightMeta.height ?? 0, metal: rightMetal },
+    );
 
     const [buckle, tail] = await Promise.all([
         orientSegment(halves.buckle, 'buckle'),

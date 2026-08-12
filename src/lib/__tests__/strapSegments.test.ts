@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { findGutter, buckleAsymmetry, segmentStats, segmentNeedsFlip } from '@/lib/strapSegments';
+import { findGutter, buckleAsymmetry, segmentStats, segmentNeedsFlip, assignHalves } from '@/lib/strapSegments';
 
 // A vertical band on white, optionally with a bright grey block standing in for a metal buckle.
 async function band(withMetal: boolean, size = 240): Promise<Buffer> {
@@ -108,5 +108,55 @@ describe('buckleAsymmetry', () => {
     const single = await buckleAsymmetry({ buckle: await band(true), tail: await band(false) });
     expect(doubled).toBeLessThan(single);
     expect(doubled).toBeCloseTo(1, 1);
+  });
+});
+
+describe('assignHalves', () => {
+  it('calls the shorter half the buckle even when the longer one scores more metal', () => {
+    // Product 16498, measured: a correct render of a pale grey strap. The long holes-piece is
+    // covered in bright eyelets and, being bigger, out-scores the actual buckle on metal — which is
+    // how it used to be handed over as the buckle half and the draft built upside down.
+    const holes = { image: 'holes', height: 1276, metal: 0.42 };
+    const buckle = { image: 'buckle', height: 810, metal: 0.31 };
+    expect(assignHalves(holes, buckle)).toEqual({ buckle: 'buckle', tail: 'holes' });
+    // Order of the two arguments must not change the answer.
+    expect(assignHalves(buckle, holes)).toEqual({ buckle: 'buckle', tail: 'holes' });
+  });
+
+  it('agrees with metal when the halves differ in length and metal points the same way', () => {
+    // Product 6286, measured: an ordinary render where nothing is in dispute.
+    expect(assignHalves(
+      { image: 'short', height: 816, metal: 0.5 },
+      { image: 'long', height: 1295, metal: 0.2 },
+    )).toEqual({ buckle: 'short', tail: 'long' });
+  });
+
+  it('falls back to metal when the two halves are the same length', () => {
+    // Product 15783, measured: PRO drew the same piece twice, so length says nothing. The standard
+    // rejects this render regardless; the point is that the tie-break still returns an answer.
+    expect(assignHalves(
+      { image: 'a', height: 1296, metal: 0.2 },
+      { image: 'b', height: 1295, metal: 0.6 },
+    )).toEqual({ buckle: 'b', tail: 'a' });
+  });
+
+  it('treats a 1.08x difference as no difference and a 1.18x one as decisive', () => {
+    // The threshold sits in a gap that is empty in the measured data: the even cluster tops out at
+    // 1.083 and the uneven one starts at 1.175.
+    expect(assignHalves(
+      { image: 'a', height: 1000, metal: 0.9 },
+      { image: 'b', height: 1083, metal: 0.1 },
+    ).buckle).toBe('a'); // decided by metal, and metal happens to agree here
+    expect(assignHalves(
+      { image: 'a', height: 1000, metal: 0.1 },
+      { image: 'b', height: 1180, metal: 0.9 },
+    ).buckle).toBe('a'); // decided by length, against metal
+  });
+
+  it('does not divide by zero when a half has no height', () => {
+    expect(assignHalves(
+      { image: 'a', height: 0, metal: 0.7 },
+      { image: 'b', height: 900, metal: 0.2 },
+    )).toEqual({ buckle: 'a', tail: 'b' });
   });
 });
