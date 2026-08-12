@@ -9,6 +9,7 @@ import { getObjectBuffer } from '@/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '@/lib/strapProfile';
 import { PRO_ASSEMBLY_PROMPT } from '@/lib/proPrompt';
 import { generateWithLora } from '@/lib/loraEngine';
+import { describeError } from '@/lib/redactError';
 
 const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
@@ -164,26 +165,39 @@ export async function POST(request: Request) {
         // faster and 3x cheaper — but it can only run on straps that have a clean render on file,
         // and it is new. Any reason it cannot run falls through to PRO, which has always worked.
         if ((process.env.GENERATE_ENGINE ?? 'pro') === 'lora') {
-            const attempt = await generateWithLora({
-                replicate,
-                strapId,
-                faceBuffer,
-                productName: strapName,
-            });
-            if (attempt.ok) {
-                console.log(`✅ LoRA finished in ${attempt.seconds.toFixed(1)}s${attempt.assessment.ok ? '' : ' (draft below standard — see warning above)'}`);
-                return NextResponse.json({
-                    success: true,
-                    // resultImage, not imageUrl: this is the field name the client reads, and the
-                    // two paths have to answer in the same shape or switching engines blanks the UI.
-                    resultImage: attempt.imageUrl,
-                    engine: 'lora',
-                    seconds: attempt.seconds,
-                    draftMeetsStandard: attempt.assessment.ok,
-                    ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
+            // generateWithLora returning { ok: false } is a planned stand-down — no clean render on
+            // file, draft below standard — and was the only outcome this used to handle. It can also
+            // THROW: Replicate's own serving infrastructure failing mid-generation (observed
+            // 2026-08-12 — a freshly trained version's weights tarball repeatedly failed to download
+            // on Replicate's side, unrelated to anything here) is not a stand-down, it is an
+            // exception, and an uncaught one skipped the PRO fallback below entirely and surfaced the
+            // generic route-level error straight to the customer instead. The whole point of falling
+            // back to PRO is that it has always worked; an engine that is "new" per the comment above
+            // has to fail into that fallback, not around it.
+            try {
+                const attempt = await generateWithLora({
+                    replicate,
+                    strapId,
+                    faceBuffer,
+                    productName: strapName,
                 });
+                if (attempt.ok) {
+                    console.log(`✅ LoRA finished in ${attempt.seconds.toFixed(1)}s${attempt.assessment.ok ? '' : ' (draft below standard — see warning above)'}`);
+                    return NextResponse.json({
+                        success: true,
+                        // resultImage, not imageUrl: this is the field name the client reads, and the
+                        // two paths have to answer in the same shape or switching engines blanks the UI.
+                        resultImage: attempt.imageUrl,
+                        engine: 'lora',
+                        seconds: attempt.seconds,
+                        draftMeetsStandard: attempt.assessment.ok,
+                        ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
+                    });
+                }
+                console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
+            } catch (err) {
+                console.warn(`⚠️ LoRA engine threw (${describeError(err)}) — falling back to PRO`);
             }
-            console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
         }
 
         // 2. Read the watch strap image
@@ -364,7 +378,7 @@ export async function POST(request: Request) {
         });
 
     } catch (error: any) {
-        console.error("❌ Processing error:", error);
+        console.error("❌ Processing error:", describeError(error));
         return NextResponse.json({ success: false, error: "Something went wrong while generating your preview. Please try again." }, { status: 500 });
     }
 }
