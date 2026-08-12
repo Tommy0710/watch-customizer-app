@@ -15,6 +15,12 @@ import type { Combo } from './selectCombos';
 // Only the ones that pass. A render that fails is one the LoRA engine should stand down on, and the
 // simplest way to guarantee that in production is for it not to be there — a missing render already
 // falls back to PRO, which is the right answer for a strap we cannot assemble properly yet.
+//
+// On filling in the rest of the catalog: 443 straps are visible in the UI and rendering all of them
+// costs roughly $35 in PRO calls, most of it on straps nobody may ever pick. The cheaper shape is to
+// let demand decide — a strap with no render already serves the customer through PRO at no extra
+// cost, so recording which straps got picked and rendering only those spreads the spend across
+// straps that are actually wanted, and stops it recurring for every new product.
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');

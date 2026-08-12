@@ -26,18 +26,23 @@ export const LORA_PROMPT_STRENGTH = 0.65;
 // on the same choices should not get a different watch.
 export const LORA_SEED = 19826;
 
-// TEST SCAFFOLD — NOT THE PRODUCTION DESIGN. Delete this, upload-clean-straps.ts, and the
-// straps-clean/ prefix in S3 before this path goes live.
+// Each strap needs a clean studio render on file before this engine can touch it, because the
+// catalog photo cannot be used directly: measured on 23 catalog crops, ZERO can be split into two
+// segments — they are staged on props, at an angle, against a coloured background. The splitter
+// needs the strap laid flat on white.
 //
-// The app's rule is that a strap is assembled from its catalog photo, background and all, with no
-// pre-cleaning step; that rule is what the model has to be trained to satisfy. This engine breaks
-// it: it needs the strap laid flat on white, because measured on 23 catalog crops ZERO can be split
-// into two segments — catalog shots are staged on props, at an angle, against a coloured
-// background. So each strap is pre-rendered clean and published to S3.
+// This was first written as a test scaffold to be deleted, on the reading that assembling from
+// anything but the catalog photo broke the app's rule. Kept deliberately after review (2026-08-12):
+// the rule is about what the customer SEES, and the customer still sees the catalog photo
+// everywhere — StrapSelector renders product.image throughout, and the render never appears on
+// screen. What it buys is consistency, which is the thing being optimised for: a strap either has
+// a render that meets the signed-off standard, in which case every generation of it comes out the
+// same way, or it has none and falls back to PRO. There is no in-between state where a customer
+// gets a worse picture without anyone knowing.
 //
-// That is a way to test the serving path and judge the model's speed and realism today. It is not
-// a way to ship. A model that only works on inputs a separate pipeline prepared for it has not
-// learnt the job, and every strap it cannot be given falls back to PRO anyway.
+// The cost of that is coverage. 13 of the 443 straps a customer can click have a render, and each
+// one costs a PRO call to make. See the note in upload-clean-straps.ts on filling that in as demand
+// asks for it rather than paying for all 443 up front.
 //
 // CLEAN_STRAP_DIR reads from a local folder instead, for working offline against the dataset.
 const CLEAN_STRAP_DIR = process.env.CLEAN_STRAP_DIR;
