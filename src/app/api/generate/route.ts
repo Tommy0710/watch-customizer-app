@@ -174,7 +174,9 @@ export async function POST(request: Request) {
                 console.log(`✅ LoRA finished in ${attempt.seconds.toFixed(1)}s${attempt.assessment.ok ? '' : ' (draft below standard — see warning above)'}`);
                 return NextResponse.json({
                     success: true,
-                    imageUrl: attempt.imageUrl,
+                    // resultImage, not imageUrl: this is the field name the client reads, and the
+                    // two paths have to answer in the same shape or switching engines blanks the UI.
+                    resultImage: attempt.imageUrl,
                     engine: 'lora',
                     seconds: attempt.seconds,
                     draftMeetsStandard: attempt.assessment.ok,
