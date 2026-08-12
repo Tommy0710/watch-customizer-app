@@ -31,6 +31,22 @@ describe('buildStrapLayoutTemplate', () => {
     expect(share).toBeLessThanOrEqual(TARGET_BUCKLE_SHARE + MAX_BUCKLE_SHARE_DRIFT);
   });
 
+  it('draws pieces the accepted SIZE, not merely the accepted ratio', async () => {
+    // The share alone passed while the first template was 20% too long and narrow — 4.78 and 7.17
+    // against the 3.96 and 5.99 measured on the renders that were signed off. Straps copied from it
+    // came back long enough to force the watch head down to 92-96%, which the standard rejects.
+    // Length over lug width is the quantity the layout actually controls, so it is what is asserted.
+    const segments = (await splitStrapSegments(await buildStrapLayoutTemplate()))!;
+    const [buckle, tail] = await Promise.all([
+      measureSegment(await trimSpringBarPins(segments.buckle, 'bottom'), 'bottom'),
+      measureSegment(await trimSpringBarPins(segments.tail, 'top'), 'top'),
+    ]);
+    expect(buckle.aspect).toBeGreaterThan(3.7);
+    expect(buckle.aspect).toBeLessThan(4.3);
+    expect(tail.aspect).toBeGreaterThan(5.7);
+    expect(tail.aspect).toBeLessThan(6.3);
+  });
+
   it('is the 9:16 shape the renderer is asked for', async () => {
     expect(TEMPLATE_WIDTH / TEMPLATE_HEIGHT).toBeCloseTo(9 / 16, 2);
   });

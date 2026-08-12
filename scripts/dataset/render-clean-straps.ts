@@ -266,7 +266,13 @@ async function main() {
                 );
             } else {
                 lastReason = verdict.reasons[0] ?? 'below standard';
-                console.log(`     attempt ${attempt} rejected — ${lastReason.slice(0, 80)}`);
+                // passes/checked printed alongside, because the reason list is the union across
+                // every failing face and its first entry can name a fault that only one face hit.
+                // A render at 7/8 is one unreadable face away from acceptance; one at 1/8 is not,
+                // and the reason text alone makes those look identical.
+                console.log(
+                    `     attempt ${attempt} rejected (${verdict.passes}/${verdict.checked} faces) — ${lastReason.slice(0, 76)}`,
+                );
             }
         }
 

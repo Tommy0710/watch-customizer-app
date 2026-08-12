@@ -17,7 +17,12 @@ import sharp from 'sharp';
 export const TEMPLATE_WIDTH = 832;
 export const TEMPLATE_HEIGHT = 1472;
 
-const PIECE_WIDTH_RATIO = 0.24; // of canvas width, per piece
+// Absolute size matters as much as the ratio between the two pieces, and getting only the ratio
+// right is what the first version did. Its pieces measured 4.78 and 7.17 in height-over-lug-width
+// against the accepted 3.96 and 5.99 — a correct 0.40 share drawn about 20% too long and narrow.
+// Straps rendered from it came back long enough that the watch head had to shrink to 92-96% to fit,
+// which the standard rejects, and the test passed throughout because it checked the share alone.
+const PIECE_WIDTH_RATIO = 0.287; // of canvas width, per piece
 const TAIL_LENGTH_RATIO = 0.94; // of canvas height
 const BUCKLE_TO_TAIL_LENGTH = 2 / 3;
 const TAPER = 0.28; // how much each piece narrows toward its far end
