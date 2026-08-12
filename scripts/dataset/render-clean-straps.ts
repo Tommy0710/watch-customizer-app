@@ -196,13 +196,29 @@ async function main() {
         console.log(`🎲 sampling ${Math.min(sample, candidates.length)} of ${candidates.length} straps with no render yet`);
     }
 
-    // Evenly spaced through the library so the sample spans brands rather than sitting inside one.
+    // Evenly spaced through the library so the sample spans brands rather than sitting inside one,
+    // and faces whose lug gap cannot be read are dropped rather than counted.
+    //
+    // Leaving them in quietly turned the 80% threshold into a 100% one. Three of the 114 library
+    // faces have an unreadable gap, so a sample of 8 reliably contained one — every accepted strap
+    // in the last run scored exactly 7/8, never 8/8 — which left a strap failing the moment it
+    // missed a single genuine face. That is a fact about those three photographs, not about the
+    // strap, and no re-render can fix it. Production already handles them: the engine stands down
+    // for that pairing and falls back to PRO.
     const faceKeys = [...new Set([...train, ...heldOut].map((c) => c.faceKey))];
     const step = Math.max(1, Math.floor(faceKeys.length / FACE_SAMPLE));
-    const faces: PreparedFace[] = await Promise.all(
-        faceKeys.filter((_, i) => i % step === 0).slice(0, FACE_SAMPLE)
-            .map(async (key) => prepareFace((await getObjectBuffer(key)).buffer)),
-    );
+    const spread = faceKeys.filter((_, i) => i % step === 0);
+    const faces: PreparedFace[] = [];
+    const tried = new Set<string>();
+    // The spread first, then the rest of the library as replacements for any that turn out unreadable.
+    for (const key of [...spread, ...faceKeys]) {
+        if (faces.length >= FACE_SAMPLE) break;
+        if (tried.has(key)) continue;
+        tried.add(key);
+        const prepared = await prepareFace((await getObjectBuffer(key)).buffer);
+        if (prepared.metrics.lugGap !== null) faces.push(prepared);
+    }
+    console.log(`🕐 judging against ${faces.length} faces with a readable lug gap`);
     const failed: { id: number; name: string; reason: string }[] = [];
     // Built once: it is the same diagram for every strap, and it is the same one every time.
     const layoutTemplate = await buildStrapLayoutTemplate();
