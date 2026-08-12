@@ -9,6 +9,7 @@ import { removeWhiteBackground } from './removeWhiteBackground';
 import { assessDraft, type DraftAssessment } from './draftStandard';
 import { buildLoraPrompt } from './loraPrompt';
 import { getObjectBuffer, cleanStrapKey } from './aws';
+import { normaliseLoraWeights } from './loraWeights';
 
 // Serving the trained style LoRA, using the SAME draft builder the training pairs were made with.
 //
@@ -108,7 +109,7 @@ export async function generateWithLora(options: {
     faceBuffer: Buffer;
     productName: string;
 }): Promise<LoraOutcome> {
-    const weights = process.env.REPLICATE_LORA_WEIGHTS;
+    const weights = normaliseLoraWeights(process.env.REPLICATE_LORA_WEIGHTS);
     if (!weights) {
         return { ok: false, reason: 'REPLICATE_LORA_WEIGHTS is not set' };
     }
