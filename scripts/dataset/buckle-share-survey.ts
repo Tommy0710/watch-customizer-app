@@ -14,7 +14,8 @@ import { TARGET_BUCKLE_SHARE, MAX_BUCKLE_SHARE_DRIFT } from '../../src/lib/draft
 // fallback, so this measures the actual distribution to see whether the failures cluster.
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
-const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
+const dirArg = process.argv.find((a) => a.startsWith('--dir='));
+const CLEAN_DIR = dirArg ? dirArg.slice('--dir='.length) : path.join(OUT_DIR, 'straps-clean');
 
 async function main() {
     const files = (await readdir(CLEAN_DIR)).filter((f) => f.endsWith('.webp')).sort();

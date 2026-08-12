@@ -27,12 +27,24 @@ const CLEAN_STRAP_PROMPT =
     'pixel-for-pixel, including any faint colour undertones such as green, blue, or purple patina ' +
     '— never substitute a generic brown or plain black leather. Completely remove the staging: the ' +
     'background surface, any large leather hide or swatch used as a backdrop, any rolled fabric or ' +
-    'cylinder prop the strap is draped over, and all shadows. Show the strap as two separate ' +
-    'segments laid flat and perfectly vertical, centred, aligned end to end with a gap between ' +
-    'them where a watch case would sit: the buckle segment above, the segment with the punched ' +
-    'holes below. The buckle segment must be clearly shorter than the holes segment. Photograph ' +
+    'cylinder prop the strap is draped over, and all shadows. Show the strap as its two real and ' +
+    'different pieces, laid flat and perfectly vertical, centred, aligned end to end with a gap ' +
+    'between them where a watch case would sit. The upper piece is the short buckle piece: it ' +
+    'carries the single metal buckle at its top end together with the keeper loops, and it has NO ' +
+    'punched holes. The lower piece is the long tail: plain tapered leather with the row of ' +
+    'punched holes and a curved tip, carrying NO buckle and NO keeper loops. The upper piece must ' +
+    'be about two thirds the length of the lower piece. The two pieces are different lengths and ' +
+    'different shapes — never draw the same piece twice, never mirror one piece to make the other, ' +
+    'and never show more than one buckle anywhere in the image. Photograph ' +
     'top-down in sharp 8k focus with soft professional studio lighting on a pure solid white ' +
     'background. Do not add a watch case, dial, or any other object.';
+
+// The four sentences above about the two pieces being different replace a single line that only
+// said "the buckle segment must be clearly shorter than the holes segment". Measured across the 74
+// renders that line produced, 54 came back as the SAME piece drawn twice — each half carrying both
+// a buckle and a row of holes, one of them mirrored — which is 73% of the catalog failing the
+// standard for one reason. The old wording asked for a proportion but never forbade the duplicate,
+// so this names the fault instead of restating the goal.
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
@@ -82,6 +94,12 @@ async function main() {
     const limit = Number(arg('limit', '9999'));
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.70')), label: 'clean-straps' });
 
+    // --only and --out exist so a prompt change can be tried on a handful of known-bad straps
+    // without overwriting the renders currently in service. Writing a trial into the live folder
+    // would replace working renders with untested ones and there is no way back but paying again.
+    const only = new Set(arg('only', '').split(',').filter(Boolean).map(Number));
+    const outDir = arg('out', CLEAN_DIR);
+
     const { train, heldOut }: { train: Combo[]; heldOut: Combo[] } =
         JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
 
@@ -90,12 +108,16 @@ async function main() {
         if (!byProduct.has(combo.productId)) byProduct.set(combo.productId, combo);
     }
 
-    await mkdir(CLEAN_DIR, { recursive: true });
-    console.log(`🧼 ${byProduct.size} straps, $${unitCost.toFixed(3)} each, cap ${guard.summary()}`);
+    await mkdir(outDir, { recursive: true });
+    console.log(
+        `🧼 ${only.size > 0 ? `${only.size} selected` : `${byProduct.size}`} straps, ` +
+        `$${unitCost.toFixed(3)} each, cap ${guard.summary()} → ${outDir}`,
+    );
 
     let rendered = 0;
     for (const [productId, combo] of byProduct) {
-        const outPath = path.join(CLEAN_DIR, `${productId}.webp`);
+        if (only.size > 0 && !only.has(productId)) continue;
+        const outPath = path.join(outDir, `${productId}.webp`);
         if (await exists(outPath)) continue;
         if (rendered >= limit) {
             console.log(`\n⏸  Reached --limit=${limit}.`);
