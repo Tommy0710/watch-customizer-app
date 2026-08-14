@@ -11,7 +11,19 @@
 // fully-configured environment. That makes loraEngine.ts unimportable from a plain test run, so this
 // pure function needed a home with no such dependency to be testable at all.
 export function normaliseLoraWeights(value: string | undefined): string | undefined {
-    return value?.includes(':') ? value.replace(':', '/') : value;
+    const trimmed = value?.trim();
+    if (!trimmed) return undefined;
+
+    // The model accepts direct URLs as well as Replicate model references. Keep URLs intact:
+    // replacing the first colon in `https://...` would silently turn a valid weights URL into
+    // an unusable model reference.
+    if (/^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) || trimmed.startsWith('data:')) {
+        return trimmed;
+    }
+
+    // Training output commonly uses `owner/model:version`, while flux-dev-lora expects the
+    // slash-separated form. Only rewrite that exact model-reference shape.
+    return trimmed.replace(/^([^/\s:]+\/[^/\s:]+):([^\s]+)$/, '$1/$2');
 }
 
 // REPLICATE_LORA_WEIGHTS can also point at an object in our own S3 bucket, marked the same
@@ -21,5 +33,6 @@ export function normaliseLoraWeights(value: string | undefined): string | undefi
 // resolution — the thing that broke account-wide on 2026-08-12/13 (see the comment on
 // getPresignedUrl in aws.ts). Returns null for anything else, including undefined.
 export function parseS3WeightsKey(value: string | undefined): string | null {
-    return value?.startsWith('s3://') ? value.slice('s3://'.length) : null;
+    const trimmed = value?.trim();
+    return trimmed?.startsWith('s3://') ? trimmed.slice('s3://'.length) || null : null;
 }
