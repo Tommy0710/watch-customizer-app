@@ -8,6 +8,8 @@
 //
 // Exits 0 the moment the trainer looks healthy, so it can be used as a wait condition.
 
+export {};
+
 const TRAINER_VERSION = '26c877b4ec3988b7e8edc5840e61339c68f09913bb11e23c31566590fd92a66d';
 const PROBE_URL =
     `https://api.replicate.com/v1/models/replicate/fast-flux-kontext-trainer/versions/${TRAINER_VERSION}/trainings`;

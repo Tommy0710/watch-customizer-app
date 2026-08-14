@@ -28,8 +28,9 @@ export async function GET() {
       success: true,
       message: `Đã đồng bộ thành công ${faces.length} mặt đồng hồ vào Database!`,
     });
-  } catch (error: any) {
-    console.error('❌ Lỗi đồng bộ Face Library:', error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Lỗi không xác định';
+    console.error('❌ Lỗi đồng bộ Face Library:', message);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

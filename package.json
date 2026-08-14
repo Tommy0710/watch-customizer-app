@@ -9,10 +9,13 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ds": "tsx --env-file=.env.local"
+    "ds": "tsx --env-file=.env.local",
+    "ds:manifest": "tsx --env-file=.env.local scripts/dataset/write-run-manifest.ts",
+    "ds:eval-style": "tsx --env-file=.env.local scripts/dataset/eval-style.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
+    "@aws-sdk/s3-request-presigner": "^3.1087.0",
     "@google/design.md": "^0.3.0",
     "@supabase/supabase-js": "^2.103.0",
     "@woocommerce/woocommerce-rest-api": "^1.0.2",

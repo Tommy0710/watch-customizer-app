@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { QRCodeSVG } from 'qrcode.react';
 import Cropper from 'react-easy-crop';
+import type { Area } from 'react-easy-crop';
 import { useAppStore } from '@/store/useAppStore';
 import getCroppedImg from '@/utils/cropImage';
 import FaceLibraryPicker from '@/components/FaceLibraryPicker';
@@ -11,7 +12,6 @@ import type { FaceItem } from '@/lib/aws';
 
 export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[] }) {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-    const [sessionId, setSessionId] = useState<string>('');
     const [uploadLink, setUploadLink] = useState<string>('');
 
     // Grab the image-update setter from Zustand
@@ -22,7 +22,7 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
     const [rotation, setRotation] = useState(0);
 
     // Tracks the crop coordinates and whether cropping is complete
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [isEditing, setIsEditing] = useState<boolean>(true);
     const [finalCroppedImage, setFinalCroppedImage] = useState<string | null>(null);
 
@@ -32,13 +32,12 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
         if (uploadedImage) return;
 
         const newSessionId = crypto.randomUUID();
-        setSessionId(newSessionId);
         const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-        setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
+        const uploadLinkTimeout = window.setTimeout(() => {
+            setUploadLink(`${currentOrigin}/mobile-upload?session=${newSessionId}`);
+        }, 0);
 
         // Declared outside so the inner function can clear it
-        let intervalId: NodeJS.Timeout;
-
         const checkUpload = async () => {
             try {
                 const res = await fetch(`/api/upload?sessionId=${newSessionId}`);
@@ -60,10 +59,13 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
         };
 
         // Poll every 2.5 seconds
-        intervalId = setInterval(checkUpload, 2500);
+        const intervalId = setInterval(checkUpload, 2500);
 
         // GUARD 3: Clean up if the user closes the popup or navigates away
-        return () => clearInterval(intervalId);
+        return () => {
+            window.clearTimeout(uploadLinkTimeout);
+            clearInterval(intervalId);
+        };
 
     }, [uploadedImage]); // <-- IMPORTANT: re-run this effect whenever 'uploadedImage' changes
 
@@ -91,7 +93,7 @@ export default function FaceUploader({ initialFaces }: { initialFaces: FaceItem[
             };
             reader.readAsDataURL(file);
         }
-    }, [setUploadedFace]);
+    }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,

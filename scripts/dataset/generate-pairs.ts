@@ -155,6 +155,11 @@ async function main() {
     const unitCost = Number(arg('unit-cost', String(ASSUMED_COST[resolution])));
     const limit = Number(arg('limit', '9999'));
     const maxSpend = Number(arg('max-spend', '1.50'));
+    // Targets specific products instead of walking combos.json in file order — added to fill a
+    // known, specific gap (e.g. under-represented duocolor straps) without spending on combos that
+    // already have coverage just because they happen to come first in the list.
+    const productIdsArg = arg('product-ids', '');
+    const productIds = productIdsArg ? new Set(productIdsArg.split(',').map(Number)) : null;
 
     const guard = createSpendGuard({ maxSpend, label: `generate-pairs:${set}` });
 
@@ -182,6 +187,7 @@ async function main() {
 
     for (const combo of combos) {
         if (done.has(combo.id)) continue;
+        if (productIds && !productIds.has(combo.productId)) continue;
         if (accepted && !accepted.has(combo.productId)) {
             skippedForColour++;
             continue;

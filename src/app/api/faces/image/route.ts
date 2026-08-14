@@ -33,8 +33,9 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
       },
     });
-  } catch (error: any) {
-    console.error('❌ Lỗi khi tải ảnh từ S3:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Lỗi không xác định';
+    console.error('❌ Lỗi khi tải ảnh từ S3:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

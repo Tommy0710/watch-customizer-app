@@ -13,3 +13,13 @@
 export function normaliseLoraWeights(value: string | undefined): string | undefined {
     return value?.includes(':') ? value.replace(':', '/') : value;
 }
+
+// REPLICATE_LORA_WEIGHTS can also point at an object in our own S3 bucket, marked the same
+// "s3://<key>" way loadFaceBuffer already recognises a library face pick in route.ts — reusing that
+// convention rather than inventing a second one. When it does, loraEngine.ts fetches the object and
+// hands Replicate a presigned URL directly, bypassing Replicate's own private-model weight
+// resolution — the thing that broke account-wide on 2026-08-12/13 (see the comment on
+// getPresignedUrl in aws.ts). Returns null for anything else, including undefined.
+export function parseS3WeightsKey(value: string | undefined): string | null {
+    return value?.startsWith('s3://') ? value.slice('s3://'.length) : null;
+}

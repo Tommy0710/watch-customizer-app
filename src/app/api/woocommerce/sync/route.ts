@@ -4,7 +4,34 @@ import clientPromise from '@/lib/mongodb';
 const CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
 const CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
 const BASE64_KEY = process.env.WC_BAESE64_KEY;
-const SYNC_SECRET_KEY = process.env.SYNC_SECRET_KEY;
+
+type WooCommerceImage = {
+  src?: string;
+  thumbnail?: string;
+};
+
+type WooCommerceProduct = {
+  id: number;
+  name?: string;
+  price?: string;
+  permalink?: string;
+  images?: WooCommerceImage[];
+  attributes?: unknown;
+  categories?: unknown;
+  tags?: unknown;
+};
+
+type SyncedProduct = {
+  id: number;
+  name?: string;
+  price?: string;
+  link?: string;
+  image?: string;
+  thumbnail?: string;
+  attributes?: unknown;
+  categories?: unknown;
+  tags?: unknown;
+};
 
 const getAuthHeaders = () => {
   const encodedCredentials = BASE64_KEY || Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
@@ -18,7 +45,7 @@ const getAuthHeaders = () => {
 export async function GET() {
 
   try {
-    let allProducts: any[] = [];
+    let allProducts: SyncedProduct[] = [];
     let page = 1;
     let totalPages = 1;
 
@@ -55,12 +82,16 @@ export async function GET() {
       if (page === 1) totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1', 10);
       console.log(`=== DEBUG: Header x-wp-totalpages (Tổng số trang) ===`, response.headers.get('x-wp-totalpages'));
 
-      const products = await response.json();
+      const products: unknown = await response.json();
       
       console.log(`=== DEBUG: Toàn bộ dữ liệu RAW trả về từ WooCommerce (Trang ${page}) ===`);
       console.dir(products, { depth: null });
       
-      const formatted = products.map((p: any) => ({
+      if (!Array.isArray(products)) {
+        throw new Error('WooCommerce trả về dữ liệu sản phẩm không hợp lệ');
+      }
+
+      const formatted = (products as WooCommerceProduct[]).map((p) => ({
         id: p.id, // ID gốc của WooCommerce
         name: p.name,
         price: p.price,
@@ -96,8 +127,9 @@ export async function GET() {
       message: `Đã đồng bộ thành công ${allProducts.length} sản phẩm vào Database!` 
     });
 
-  } catch (error: any) {
-    console.error("❌ Lỗi đồng bộ:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Lỗi không xác định';
+    console.error("❌ Lỗi đồng bộ:", message);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

@@ -62,7 +62,7 @@ async function main() {
         }
         const raw = Buffer.from(await res.arrayBuffer());
 
-        let out = raw;
+        let out: Buffer<ArrayBufferLike> = raw;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             out = await cropToStrap(raw);
             // cropToStrap swallows errors and hands back the original buffer, so an unchanged

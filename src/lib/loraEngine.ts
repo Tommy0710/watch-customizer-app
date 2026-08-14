@@ -8,8 +8,15 @@ import { trimSpringBarPins, measureSegment, measureFace } from './segmentFit';
 import { removeWhiteBackground } from './removeWhiteBackground';
 import { assessDraft, type DraftAssessment } from './draftStandard';
 import { buildLoraPrompt } from './loraPrompt';
-import { getObjectBuffer, cleanStrapKey } from './aws';
-import { normaliseLoraWeights } from './loraWeights';
+import { getObjectBuffer, cleanStrapKey, getPresignedUrl } from './aws';
+import { normaliseLoraWeights, parseS3WeightsKey } from './loraWeights';
+import {
+    getLoraModel,
+    getLoraPromptStrength,
+    getLoraSeed,
+    DEFAULT_LORA_SCALE,
+    DEFAULT_LORA_STEPS,
+} from './loraConfig';
 
 // Serving the trained style LoRA, using the SAME draft builder the training pairs were made with.
 //
@@ -18,14 +25,14 @@ import { normaliseLoraWeights } from './loraWeights';
 // its input even slightly differently is asking the model to do a job it never saw. Every function
 // here is imported from the same modules scripts/dataset uses.
 
-export const LORA_MODEL = 'black-forest-labs/flux-dev-lora';
+export const LORA_MODEL = getLoraModel();
 // Found by sweeping 0.25 to 0.8 on a held-out pair: below 0.5 the model barely touches the draft
 // and the pasted-on look survives, at 0.8 it starts reinventing the leather grain the draft exists
 // to carry. 0.6-0.7 is the working band.
-export const LORA_PROMPT_STRENGTH = 0.65;
+export const LORA_PROMPT_STRENGTH = getLoraPromptStrength();
 // Fixed so the same strap and face give the same picture twice; a customer clicking Combine again
 // on the same choices should not get a different watch.
-export const LORA_SEED = 19826;
+export const LORA_SEED = getLoraSeed();
 
 // Each strap needs a clean studio render on file before this engine can touch it, because the
 // catalog photo cannot be used directly: measured on 23 catalog crops, ZERO can be split into two
@@ -47,6 +54,38 @@ export const LORA_SEED = 19826;
 //
 // CLEAN_STRAP_DIR reads from a local folder instead, for working offline against the dataset.
 const CLEAN_STRAP_DIR = process.env.CLEAN_STRAP_DIR;
+
+// Measured directly (2026-08-13): a fresh signed URL on every call made every generation re-download
+// the 164MB weights file — 19-23s, up from the ~12s this used to take. Reusing the exact same URL for
+// a second call dropped it to 7.1s, so Replicate is caching weights by URL identity, not file content.
+// A signed URL's query string changes every time it's (re)signed even for the same key, so generating
+// one per request defeated that cache on every single generation. Caching the URL itself in module
+// scope — regenerated only when it's actually close to expiring — lets a warm serverless instance
+// reuse it across requests the way the old owner/model/version reference did before Replicate's
+// private-model serving broke.
+const PRESIGN_TTL_SECONDS = 6 * 60 * 60;
+const PRESIGN_REFRESH_MARGIN_MS = 30 * 60 * 1000;
+let cachedWeightsUrl: { key: string; url: string; expiresAt: number } | null = null;
+
+async function resolvePresignedWeightsUrl(key: string): Promise<string> {
+    const now = Date.now();
+    if (cachedWeightsUrl && cachedWeightsUrl.key === key && cachedWeightsUrl.expiresAt - now > PRESIGN_REFRESH_MARGIN_MS) {
+        return cachedWeightsUrl.url;
+    }
+    const url = await getPresignedUrl(key, PRESIGN_TTL_SECONDS);
+    cachedWeightsUrl = { key, url, expiresAt: now + PRESIGN_TTL_SECONDS * 1000 };
+    return url;
+}
+
+// Self-hosted (s3://<key>) takes priority when set — it is what actually works right now, since
+// Replicate's own private-model weight serving is broken account-wide (see getPresignedUrl in
+// aws.ts). Falls through to the owner/model[/version] form so this keeps working unmodified once
+// Replicate's side recovers and REPLICATE_LORA_WEIGHTS is pointed back at a model reference.
+async function resolveLoraWeights(value: string | undefined): Promise<string | undefined> {
+    const s3Key = parseS3WeightsKey(value);
+    if (s3Key) return resolvePresignedWeightsUrl(s3Key);
+    return normaliseLoraWeights(value);
+}
 
 export type LoraOutcome =
     | { ok: true; imageUrl: string; assessment: DraftAssessment; seconds: number }
@@ -109,7 +148,7 @@ export async function generateWithLora(options: {
     faceBuffer: Buffer;
     productName: string;
 }): Promise<LoraOutcome> {
-    const weights = normaliseLoraWeights(process.env.REPLICATE_LORA_WEIGHTS);
+    const weights = await resolveLoraWeights(process.env.REPLICATE_LORA_WEIGHTS);
     if (!weights) {
         return { ok: false, reason: 'REPLICATE_LORA_WEIGHTS is not set' };
     }
@@ -136,16 +175,16 @@ export async function generateWithLora(options: {
     }
 
     const startedAt = Date.now();
-    const output: unknown = await options.replicate.run(LORA_MODEL, {
+    const output: unknown = await options.replicate.run(LORA_MODEL as `${string}/${string}`, {
         input: {
             seed: LORA_SEED,
             prompt: buildLoraPrompt(options.productName),
             image: `data:image/png;base64,${draft.toString('base64')}`,
             prompt_strength: LORA_PROMPT_STRENGTH,
             lora_weights: weights,
-            lora_scale: 1,
+            lora_scale: DEFAULT_LORA_SCALE,
             megapixels: '1',
-            num_inference_steps: 30,
+            num_inference_steps: DEFAULT_LORA_STEPS,
             output_format: 'webp',
             output_quality: 90,
             go_fast: false,

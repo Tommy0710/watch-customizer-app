@@ -1,4 +1,5 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import clientPromise from '@/lib/mongodb';
 
@@ -112,6 +113,17 @@ export async function putCleanStrapRender(productId: number, body: Buffer): Prom
   const key = cleanStrapKey(productId);
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: 'image/webp' }));
   return key;
+}
+
+// Replicate's `lora_weights` input accepts an arbitrary signed URL, and calling this fresh on every
+// generation (rather than storing one long-lived URL) means it never has an expiry to manage. Added
+// after Replicate's own weight-serving for private models broke for an entire account (both an old,
+// previously-working version and a brand new one, on two different destination models) for 15+ hours
+// straight, unrelated to billing — see loraEngine.ts. Hosting the weights file ourselves and handing
+// Replicate a direct URL sidesteps that resolution path entirely; a short expiry is enough since the
+// URL is used within the same request that generates it, never stored or reused.
+export async function getPresignedUrl(key: string, expiresInSeconds = 300): Promise<string> {
+  return getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: key }), { expiresIn: expiresInSeconds });
 }
 
 export async function getThumbnailBuffer(key: string, width = 240): Promise<{ buffer: Buffer; contentType: string }> {

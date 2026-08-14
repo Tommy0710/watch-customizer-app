@@ -26,7 +26,11 @@ const MIN_IMAGES = 10; // the trainer's own recommended floor
 
 
 async function main() {
-    const { approved }: { approved: string[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'approved.json'), 'utf8'));
+    const parsed = JSON.parse(await readFile(path.join(OUT_DIR, 'approved.json'), 'utf8')) as { approved?: unknown };
+    if (!Array.isArray(parsed.approved) || !parsed.approved.every((id): id is string => typeof id === 'string' && id.length > 0)) {
+        throw new Error('approved.json must contain an approved array of non-empty string IDs.');
+    }
+    const approved = [...new Set(parsed.approved)];
     const manifest: { id: string; productName: string }[] =
         JSON.parse(await readFile(path.join(OUT_DIR, 'pairs-train.json'), 'utf8'));
     const nameById = new Map(manifest.map((m) => [m.id, m.productName]));

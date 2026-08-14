@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     }
     
     return NextResponse.json({ success: false, message: 'Chưa có ảnh' });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Lỗi không xác định';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

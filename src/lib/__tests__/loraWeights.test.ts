@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseLoraWeights } from '@/lib/loraWeights';
+import { normaliseLoraWeights, parseS3WeightsKey } from '@/lib/loraWeights';
 
 describe('normaliseLoraWeights', () => {
   it('converts the colon form training prints to the slash form flux-dev-lora expects', () => {
@@ -21,5 +21,20 @@ describe('normaliseLoraWeights', () => {
 
   it('passes undefined through so the caller sees "not set" rather than a crash', () => {
     expect(normaliseLoraWeights(undefined)).toBeUndefined();
+  });
+});
+
+describe('parseS3WeightsKey', () => {
+  it('extracts the key from an s3:// reference', () => {
+    expect(parseS3WeightsKey('s3://lora-weights/watch-lora-v2-4b720caca7f0.safetensors'))
+      .toBe('lora-weights/watch-lora-v2-4b720caca7f0.safetensors');
+  });
+
+  it('returns null for a Replicate owner/model reference', () => {
+    expect(parseS3WeightsKey('tommy0710/watch-lora/79498e5efeeadfa027b6b90245a9ba8')).toBeNull();
+  });
+
+  it('returns null for undefined', () => {
+    expect(parseS3WeightsKey(undefined)).toBeNull();
   });
 });

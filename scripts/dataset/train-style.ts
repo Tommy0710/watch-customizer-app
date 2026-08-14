@@ -11,7 +11,6 @@ import { describeError } from '../lib/reportError';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const TRAINER_OWNER = 'ostris';
 const TRAINER_NAME = 'flux-dev-lora-trainer';
-const DESTINATION = 'tommy0710/watch-lora';
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
@@ -22,6 +21,11 @@ function arg(name: string, fallback: string): string {
 
 async function main() {
     const steps = Number(arg('steps', '1000'));
+    // Overridable so a stuck destination model (see the 2026-08-12/13 weight-serving incident —
+    // both versions of tommy0710/watch-lora stopped serving weights right after a new version
+    // landed) can be worked around by training into a fresh model, without losing the ability to
+    // retrain the original destination once Replicate's side recovers.
+    const DESTINATION = arg('destination', 'tommy0710/watch-lora');
     const zip = await readFile(path.join(OUT_DIR, 'style-dataset.zip'));
 
     const model = await replicate.models.get(TRAINER_OWNER, TRAINER_NAME);

@@ -47,8 +47,13 @@ function MobileUploadClient() {
 
   useEffect(() => {
     if (!sessionId) return;
-    startCamera();
-    return () => stopCamera();
+    const startCameraTimeout = window.setTimeout(() => {
+      void startCamera();
+    }, 0);
+    return () => {
+      window.clearTimeout(startCameraTimeout);
+      stopCamera();
+    };
   }, [sessionId, startCamera, stopCamera]);
 
   const capturePhoto = useCallback(() => {

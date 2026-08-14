@@ -159,6 +159,7 @@ export async function POST(request: Request) {
         // crop succeeded) — false on any fallback path or when detection was skipped entirely.
         // Used to decide whether to hand the cropped result back to the client for caching.
         const didCropJustNow = faceBuffer !== rawFaceBuffer;
+        let loraFallbackReason: string | undefined;
 
         // 1c. The trained style LoRA, when it is switched on. It assembles the watch itself from a
         // clean strap render rather than asking a general model to work it out, so it is roughly 5x
@@ -194,8 +195,10 @@ export async function POST(request: Request) {
                         ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
                     });
                 }
+                loraFallbackReason = attempt.reason;
                 console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
             } catch (err) {
+                loraFallbackReason = `LoRA error — ${describeError(err)}`;
                 console.warn(`⚠️ LoRA engine threw (${describeError(err)}) — falling back to PRO`);
             }
         }
@@ -347,12 +350,14 @@ export async function POST(request: Request) {
         // treating them as permanent failures, so 5xx responses get the same one-retry treatment.
         // 4xx responses are NOT retried — those mean the request itself was rejected and an
         // identical retry would just fail the same way again.
-        let output: any;
+        let output: unknown;
         try {
             output = await replicate.run("black-forest-labs/flux-2-pro", { input: replicateInput });
-        } catch (err: any) {
-            const isFlaggedSensitive = String(err?.message ?? err).includes('E005') || String(err?.message ?? err).toLowerCase().includes('flagged as sensitive');
-            const status = err?.response?.status;
+        } catch (err: unknown) {
+            const errorRecord = err && typeof err === 'object' ? err as { message?: unknown; response?: { status?: unknown } } : undefined;
+            const message = String(errorRecord?.message ?? err);
+            const isFlaggedSensitive = message.includes('E005') || message.toLowerCase().includes('flagged as sensitive');
+            const status = errorRecord?.response?.status;
             const isTransientServerError = typeof status === 'number' && status >= 500;
             if (!isFlaggedSensitive && !isTransientServerError) throw err;
             console.warn(
@@ -366,18 +371,24 @@ export async function POST(request: Request) {
         console.log("✅ Processing complete.");
 
         if (!output) throw new Error("Did not receive a valid result. Please try again.");
-        const imageUrl = typeof output === 'string' ? output : output.url();
+        const outputRecord = output && typeof output === 'object' ? output as { url?: () => string } : undefined;
+        const imageUrl = typeof output === 'string'
+            ? output
+            : outputRecord && typeof outputRecord.url === 'function'
+                ? outputRecord.url()
+                : (() => { throw new Error('Did not receive a valid result URL.'); })();
 
         return NextResponse.json({
             success: true,
             engine: 'pro',
             resultImage: imageUrl,
+            ...(loraFallbackReason ? { loraFallbackReason } : {}),
             // Hand the freshly-cropped face back to the client so it can cache and resend it on
             // the next Combine (different strap, same photo) instead of paying for detection again.
             ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("❌ Processing error:", describeError(error));
         return NextResponse.json({ success: false, error: "Something went wrong while generating your preview. Please try again." }, { status: 500 });
     }

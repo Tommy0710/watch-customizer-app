@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -23,19 +23,32 @@ const JPEG = { quality: 95, chromaSubsampling: '4:4:4' } as const;
 const PACK_WIDTH = 832;
 const PACK_HEIGHT = 1472;
 
+function flag(name: string): boolean {
+    return process.argv.includes(`--${name}`);
+}
+
+async function exists(file: string): Promise<boolean> {
+    try { await access(file); return true; } catch { return false; }
+}
+
 async function main() {
     const approvedPath = path.join(OUT_DIR, 'approved.json');
     let approved: string[];
 
     try {
-        approved = (JSON.parse(await readFile(approvedPath, 'utf8')) as { approved: string[] }).approved;
+        const parsed = JSON.parse(await readFile(approvedPath, 'utf8')) as { approved?: unknown };
+        if (!Array.isArray(parsed.approved) || !parsed.approved.every((id): id is string => typeof id === 'string' && id.length > 0)) {
+            throw new Error('approved.json must contain an approved array of non-empty string IDs.');
+        }
+        approved = [...new Set(parsed.approved)];
     } catch {
-        // No hand review yet — fall back to every generated pair so the pipeline can be exercised,
-        // but say so loudly, because an unreviewed set is exactly how a bad pair reaches training.
+        if (await exists(approvedPath)) throw new Error('approved.json is malformed. Fix the review file before packing.');
+        if (!flag('allow-unreviewed')) {
+            throw new Error('approved.json is required. Review the contact sheet first, or explicitly pass --allow-unreviewed for a throwaway local experiment.');
+        }
         const manifest = JSON.parse(await readFile(path.join(OUT_DIR, 'pairs-train.json'), 'utf8')) as { id: string }[];
-        approved = manifest.map((m) => m.id);
-        console.warn(`⚠️  No approved.json found — packing ALL ${approved.length} generated pairs unreviewed.`);
-        console.warn('   Run build-contact-sheet.ts and review them if this is a real training run.');
+        approved = [...new Set(manifest.map((m) => m.id))];
+        console.warn(`⚠️  --allow-unreviewed enabled — packing ALL ${approved.length} generated pairs.`);
     }
 
     if (approved.length < MIN_PAIRS) {
@@ -46,6 +59,7 @@ async function main() {
     await mkdir(STAGE_DIR, { recursive: true });
 
     let packed = 0;
+    const packedIds: string[] = [];
     for (const id of approved) {
         const n = String(packed).padStart(3, '0');
         try {
@@ -58,6 +72,7 @@ async function main() {
             await sharp(end).resize(PACK_WIDTH, PACK_HEIGHT, { fit: 'fill' }).jpeg(JPEG)
                 .toFile(path.join(STAGE_DIR, `${n}_end.jpg`));
             packed++;
+            packedIds.push(id);
         } catch (err) {
             console.warn(`  ⚠️ skipping ${id}: ${(err as Error).message.slice(0, 70)}`);
         }
@@ -73,7 +88,19 @@ async function main() {
     // -j flattens paths: the trainer expects the pairs at the zip root, not inside a folder.
     await run('zip', ['-j', '-q', zipPath, ...files]);
 
-    await writeFile(path.join(OUT_DIR, 'dataset-manifest.json'), JSON.stringify({ packed, approved }, null, 2));
+    const sourceManifest = await exists(path.join(OUT_DIR, 'pairs-train.json'))
+        ? JSON.parse(await readFile(path.join(OUT_DIR, 'pairs-train.json'), 'utf8'))
+        : [];
+    await writeFile(path.join(OUT_DIR, 'dataset-manifest.json'), JSON.stringify({
+        manifestVersion: 1,
+        packed,
+        approved: packedIds,
+        requestedApproved: approved,
+        sourcePairCount: sourceManifest.length,
+        reviewed: await exists(approvedPath),
+        canvas: { width: PACK_WIDTH, height: PACK_HEIGHT },
+        format: 'jpg-4:4:4-quality-95',
+    }, null, 2));
     console.log(`✅ ${packed} pairs → ${zipPath}`);
     process.exit(0);
 }
