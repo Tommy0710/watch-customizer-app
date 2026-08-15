@@ -92,9 +92,10 @@ Review `scripts/dataset/out/eval-*.html` theo rubric: assembly, strap fidelity, 
 
 ### Smoke-test toàn catalog (chỉ dùng tạm thời)
 
-Để thử LoRA trên cả những dây chưa có clean render, đặt `LORA_TEST_MODE=force` ở môi trường
-production. Chế độ này dùng ảnh catalog làm draft thay thế, đánh dấu response là `loraTestMode=force`
-và **không fallback PRO**: nếu LoRA không chạy được, API trả `502` cùng lý do để test không bị
+Để thử LoRA trên cả những dây chưa có clean render, đặt `GENERATE_ENGINE=lora` và
+`LORA_TEST_MODE=force` ở môi trường production. Khi `GENERATE_ENGINE=lora`, API mặc định **không
+fallback PRO**; chế độ force dùng ảnh catalog làm draft thay thế, đánh dấu response là
+`loraTestMode=force`, và nếu LoRA không chạy được thì API trả `502` cùng lý do để test không bị
 đánh tráo bằng ảnh PRO. Chất lượng không được coi là benchmark vì draft catalog nằm ngoài phân phối
 train. Xóa biến này sau khi test để quay về gate chuẩn.
 

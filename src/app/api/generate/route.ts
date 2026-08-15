@@ -201,7 +201,7 @@ export async function POST(request: Request) {
                     });
                 }
                 loraFallbackReason = attempt.reason;
-                if (getLoraTestMode() === 'force') {
+                if (getLoraTestMode() === 'force' || process.env.GENERATE_ENGINE === 'lora') {
                     console.warn(`🧪 LoRA force test failed without PRO fallback (${attempt.reason})`);
                     return NextResponse.json({
                         success: false,
@@ -213,7 +213,7 @@ export async function POST(request: Request) {
                 console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
             } catch (err) {
                 loraFallbackReason = `LoRA error — ${describeError(err)}`;
-                if (getLoraTestMode() === 'force') {
+                if (getLoraTestMode() === 'force' || process.env.GENERATE_ENGINE === 'lora') {
                     console.warn(`🧪 LoRA force test threw without PRO fallback (${loraFallbackReason})`);
                     return NextResponse.json({
                         success: false,
