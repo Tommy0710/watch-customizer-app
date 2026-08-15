@@ -9,6 +9,7 @@ import { getObjectBuffer } from '@/lib/aws';
 import { classifyStrap, buildStrapProfileClause } from '@/lib/strapProfile';
 import { PRO_ASSEMBLY_PROMPT } from '@/lib/proPrompt';
 import { generateWithLora } from '@/lib/loraEngine';
+import { getLoraTestMode } from '@/lib/loraConfig';
 import { describeError } from '@/lib/redactError';
 
 const replicate = new Replicate({
@@ -200,9 +201,27 @@ export async function POST(request: Request) {
                     });
                 }
                 loraFallbackReason = attempt.reason;
+                if (getLoraTestMode() === 'force') {
+                    console.warn(`🧪 LoRA force test failed without PRO fallback (${attempt.reason})`);
+                    return NextResponse.json({
+                        success: false,
+                        engine: 'lora',
+                        loraTestMode: 'force',
+                        error: attempt.reason,
+                    }, { status: 502 });
+                }
                 console.warn(`⚠️ LoRA engine stood down (${attempt.reason}) — falling back to PRO`);
             } catch (err) {
                 loraFallbackReason = `LoRA error — ${describeError(err)}`;
+                if (getLoraTestMode() === 'force') {
+                    console.warn(`🧪 LoRA force test threw without PRO fallback (${loraFallbackReason})`);
+                    return NextResponse.json({
+                        success: false,
+                        engine: 'lora',
+                        loraTestMode: 'force',
+                        error: loraFallbackReason,
+                    }, { status: 502 });
+                }
                 console.warn(`⚠️ LoRA engine threw (${describeError(err)}) — falling back to PRO`);
             }
         }
