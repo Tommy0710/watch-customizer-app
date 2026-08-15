@@ -254,9 +254,13 @@ async function main() {
         manifest.push({
             id: combo.id,
             bucket: combo.bucket,
+            material: combo.material,
+            materialBucket: combo.materialBucket,
             productName: combo.productName,
             faceKey: combo.faceKey,
             strapImage: combo.strapImage,
+            categories: combo.categories,
+            attributes: combo.attributes,
             resolution,
         });
         // Written after every single pair so a crash resumes instead of re-paying.

@@ -19,6 +19,7 @@ type WooCommerceProduct = {
   attributes?: unknown;
   categories?: unknown;
   tags?: unknown;
+  stock_status?: string;
 };
 
 type SyncedProduct = {
@@ -31,6 +32,7 @@ type SyncedProduct = {
   attributes?: unknown;
   categories?: unknown;
   tags?: unknown;
+  stockStatus?: string;
 };
 
 const getAuthHeaders = () => {
@@ -56,10 +58,11 @@ export async function GET() {
       url.searchParams.append('per_page', '100');
       url.searchParams.append('page', page.toString());
       url.searchParams.append('status', 'publish');
-      url.searchParams.append('stock_status', 'instock');
+      // Keep published out-of-stock products in the catalog for material training and future
+      // restock visibility. StrapSelector still filters them from the customer picker.
       
       // BẮT BUỘC MỞ DÒNG NÀY ĐỂ KHÔNG BỊ TRÀN RAM
-      url.searchParams.append('_fields', 'id,name,price,permalink,images,attributes,categories,tags');
+      url.searchParams.append('_fields', 'id,name,price,permalink,images,attributes,categories,tags,stock_status');
 
       console.log(`\n=== DEBUG: Request URL (Trang ${page}) ===`);
       console.log(url.toString());
@@ -101,6 +104,7 @@ export async function GET() {
         attributes: p.attributes,
         categories: p.categories,
         tags: p.tags,
+        stockStatus: p.stock_status || 'instock',
       }));
       
       allProducts = [...allProducts, ...formatted];

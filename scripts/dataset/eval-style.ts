@@ -3,9 +3,10 @@ import path from 'node:path';
 import Replicate from 'replicate';
 import { splitStrapSegments } from '../../src/lib/strapSegments';
 import { buildSegmentedDraft } from '../../src/lib/segmentedDraft';
-import { getObjectBuffer, getPresignedUrl } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
-import { TRIGGER_WORD } from './styleDataset';
+import { buildMaterialAwareLoraPrompt, buildLoraPrompt, LORA_PROMPT_SCHEMA } from '../../src/lib/loraPrompt';
+import { buildMaterialClause, classifyMaterial } from '../../src/lib/materialTaxonomy';
+import { buildStrapProfileClause, classifyStrap } from '../../src/lib/strapProfile';
 import {
     DEFAULT_LORA_SCALE,
     DEFAULT_LORA_STEPS,
@@ -30,6 +31,8 @@ function arg(name: string, fallback: string): string {
     const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
     return hit ? hit.slice(name.length + 3) : fallback;
 }
+
+function flag(name: string): boolean { return process.argv.includes(`--${name}`); }
 
 async function exists(file: string): Promise<boolean> {
     try { await access(file); return true; } catch { return false; }
@@ -60,6 +63,15 @@ async function main() {
     const evalDir = path.join(OUT_DIR, 'eval', label);
     const trainingFile = arg('training-file', 'training.json');
     const guard = createSpendGuard({ maxSpend: Number(arg('max-spend', '0.40')), label: `eval-style:${label}` });
+
+    if (flag('dry-run')) {
+        const { heldOut }: { heldOut: Combo[] } = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8'));
+        console.log(`✅ dry-run: ${heldOut.length} held-out cases discovered; no weights lookup or generation request made`);
+        return;
+    }
+    // Keep AWS/Mongo imports out of dry-run mode so the local safeguard works on a machine that
+    // deliberately has no production credentials configured.
+    const { getObjectBuffer, getPresignedUrl } = await import('../../src/lib/aws');
 
     // Load by the direct weights URL, not by "owner/name:version". The destination model is
     // private, and flux-dev-lora fetches a named model over public HTTP — it cannot authenticate,
@@ -158,9 +170,13 @@ async function main() {
             }
             await writeFile(path.join(evalDir, `${combo.id}_draft.png`), draft);
 
-        const prompt =
-            `${TRIGGER_WORD} a wristwatch fitted with a ${combo.productName.replace(/\s*watch\s+strap\s*$/i, '')} strap, ` +
-            'photographed top-down as a studio product shot on a plain white background';
+            const prompt = process.env.REPLICATE_LORA_PROMPT_SCHEMA === LORA_PROMPT_SCHEMA
+                ? buildMaterialAwareLoraPrompt(
+                    combo.productName,
+                    buildStrapProfileClause(classifyStrap(combo.productName, combo.categories, combo.attributes)),
+                    buildMaterialClause(classifyMaterial({ name: combo.productName, categories: combo.categories, attributes: combo.attributes })),
+                )
+                : buildLoraPrompt(combo.productName);
 
             if (delayMs > 0 && rows.some((row) => row.seconds !== undefined)) {
                 await new Promise((resolve) => setTimeout(resolve, delayMs));

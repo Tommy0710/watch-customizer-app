@@ -7,6 +7,7 @@
 
 // A non-word so it cannot collide with anything FLUX already knows.
 export const TRIGGER_WORD = 'HNDDNW';
+export const LORA_PROMPT_SCHEMA = 'material-v2';
 
 // Describes what VARIES between images (which strap). What stays constant — the assembly, the
 // studio framing — is what the trigger word comes to mean, so it is deliberately left implicit
@@ -19,4 +20,15 @@ export function buildLoraPrompt(productName: string): string {
         .replace(/\s+/g, ' ')
         .trim();
     return `${TRIGGER_WORD} a wristwatch fitted with a ${strap} strap, photographed top-down as a studio product shot on a plain white background`;
+}
+
+// Material-aware captions are opt-in because existing weights were trained with the legacy
+// caption. Keep this contract shared by the dataset packer, evaluator, and production engine so a
+// retrained model never silently receives a different prompt at serving time.
+export function buildMaterialAwareLoraPrompt(
+    productName: string,
+    profileClause: string,
+    materialClause = '',
+): string {
+    return buildLoraPrompt(productName) + materialClause + profileClause;
 }

@@ -6,6 +6,7 @@ import {
     getLoraModel,
     getLoraPromptStrength,
     getLoraSeed,
+    getLoraPromptSchema,
 } from '../../src/lib/loraConfig';
 
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
@@ -38,6 +39,7 @@ async function main() {
     const evaluation = evaluationLabel
         ? await readJsonIfPresent(path.join(OUT_DIR, `eval-timings-${evaluationLabel}.json`))
         : null;
+    const materialCoverage = await readJsonIfPresent(path.join(OUT_DIR, 'material-coverage.json'));
     const split = combos && typeof combos === 'object' && !Array.isArray(combos)
         ? {
             trainCount: Array.isArray((combos as { train?: unknown }).train) ? (combos as { train: unknown[] }).train.length : 0,
@@ -51,7 +53,7 @@ async function main() {
         }
         : null;
     const manifest = {
-        manifestVersion: 1,
+        manifestVersion: 2,
         createdAt: new Date().toISOString(),
         gitCommit: process.env.GIT_COMMIT || null,
         datasetSha256: await sha256(path.join(OUT_DIR, 'dataset.zip')),
@@ -60,12 +62,14 @@ async function main() {
         training,
         combos,
         split,
+        materialCoverage,
         evaluation: evaluationLabel ? { label: evaluationLabel, result: evaluation } : null,
         serving: {
             model: getLoraModel() || DEFAULT_LORA_MODEL,
             weights: process.env.REPLICATE_LORA_WEIGHTS ? 'configured' : 'not-configured',
             seed: getLoraSeed(),
             promptStrength: getLoraPromptStrength(),
+            promptSchema: getLoraPromptSchema(),
         },
     };
 

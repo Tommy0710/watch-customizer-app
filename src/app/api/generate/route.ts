@@ -181,6 +181,8 @@ export async function POST(request: Request) {
                     strapId,
                     faceBuffer,
                     productName: strapName,
+                    categories: strapCategories,
+                    attributes: strapAttributes,
                 });
                 if (attempt.ok) {
                     console.log(`✅ LoRA finished in ${attempt.seconds.toFixed(1)}s${attempt.assessment.ok ? '' : ' (draft below standard — see warning above)'}`);

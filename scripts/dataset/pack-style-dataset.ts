@@ -3,7 +3,10 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
-import { TRIGGER_WORD, caption } from './styleDataset';
+import { TRIGGER_WORD } from './styleDataset';
+import { buildMaterialAwareLoraPrompt } from '../../src/lib/loraPrompt';
+import { buildMaterialClause, classifyMaterial } from '../../src/lib/materialTaxonomy';
+import { buildStrapProfileClause, classifyStrap, type Attribute } from '../../src/lib/strapProfile';
 import { describeError } from '../lib/reportError';
 
 // Packs the approved "after" images as a style dataset for ostris/flux-dev-lora-trainer.
@@ -31,26 +34,40 @@ async function main() {
         throw new Error('approved.json must contain an approved array of non-empty string IDs.');
     }
     const approved = [...new Set(parsed.approved)];
-    const manifest: { id: string; productName: string }[] =
+    const manifest: { id: string; productName: string; categories?: string[]; attributes?: Attribute[] }[] =
         JSON.parse(await readFile(path.join(OUT_DIR, 'pairs-train.json'), 'utf8'));
-    const nameById = new Map(manifest.map((m) => [m.id, m.productName]));
+    const byId = new Map(manifest.map((m) => [m.id, m]));
+    const combos = JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8')) as {
+        activeMaterialFamilies?: string[];
+    };
+    const activeFamilies = combos.activeMaterialFamilies ? new Set(combos.activeMaterialFamilies) : null;
 
     await rm(STAGE_DIR, { recursive: true, force: true });
     await mkdir(STAGE_DIR, { recursive: true });
 
     let packed = 0;
     for (const id of approved) {
-        const productName = nameById.get(id);
-        if (!productName) continue;
+        const pair = byId.get(id);
+        if (!pair) continue;
 
         try {
+            const material = classifyMaterial({ name: pair.productName, categories: pair.categories ?? [], attributes: pair.attributes ?? [] });
+            if (activeFamilies && !activeFamilies.has(material.family)) {
+                console.warn(`  ⏭ skipping ${id}: inactive material family ${material.family}`);
+                continue;
+            }
             const image = await readFile(path.join(PAIR_DIR, `${id}_end.webp`));
             const base = String(packed).padStart(3, '0');
             // JPEG at 4:4:4 — full chroma resolution, so the fine leather grain the model has to
             // learn survives the encode.
             await sharp(image).jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
                 .toFile(path.join(STAGE_DIR, `${base}.jpg`));
-            await writeFile(path.join(STAGE_DIR, `${base}.txt`), caption(productName));
+            const profile = classifyStrap(pair.productName, pair.categories ?? [], pair.attributes ?? []);
+            await writeFile(path.join(STAGE_DIR, `${base}.txt`), buildMaterialAwareLoraPrompt(
+                pair.productName,
+                buildStrapProfileClause(profile),
+                buildMaterialClause(material),
+            ));
             packed++;
         } catch (err) {
             console.warn(`  ⚠️ skipping ${id}: ${(err as Error).message.slice(0, 60)}`);
@@ -68,7 +85,9 @@ async function main() {
 
     console.log(`✅ ${packed} images + captions → ${zipPath}`);
     console.log(`   trigger word: ${TRIGGER_WORD}`);
-    console.log(`   example caption: ${caption(nameById.get(approved[0]) ?? 'Leather')}`);
+    const example = byId.get(approved[0]);
+    console.log(`   prompt schema: material-v2 (${TRIGGER_WORD})`);
+    console.log(`   example caption: ${example ? buildMaterialAwareLoraPrompt(example.productName, buildStrapProfileClause(classifyStrap(example.productName, example.categories ?? [], example.attributes ?? [])), buildMaterialClause(classifyMaterial({ name: example.productName, categories: example.categories ?? [], attributes: example.attributes ?? [] }))) : 'n/a'}`);
     process.exit(0);
 }
 

@@ -62,6 +62,8 @@ describe('selectCombos', () => {
     const combo = selectCombos(PRODUCTS, FACES, 4)[0];
     expect(Array.isArray(combo.categories)).toBe(true);
     expect(Array.isArray(combo.attributes)).toBe(true);
+    expect(combo.material).toHaveProperty('family');
+    expect(combo.materialBucket).toContain(':');
   });
 
   it('gives each combo a stable, filesystem-safe id', () => {

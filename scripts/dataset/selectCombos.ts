@@ -1,6 +1,7 @@
 import type { Product } from '../../src/lib/woocommerce';
 import type { FaceItem } from '../../src/lib/aws';
 import { classifyStrap, type Attribute } from '../../src/lib/strapProfile';
+import { classifyMaterial, type MaterialProfile } from './materialTaxonomy';
 
 export type Combo = {
     id: string;
@@ -14,6 +15,8 @@ export type Combo = {
     faceKey: string;
     faceName: string;
     bucket: string;
+    material: MaterialProfile;
+    materialBucket: string;
 };
 
 // Deterministic PRNG. Math.random would make a re-run pick a different sample, which defeats
@@ -38,7 +41,7 @@ function shuffled<T>(items: T[], rand: () => number): T[] {
 // Straps that share a construction profile teach the model the same thing, so the profile — not
 // the product — is the unit we balance across.
 function bucketOf(product: Product): string {
-    const profile = classifyStrap(
+        const profile = classifyStrap(
         product.name,
         product.categories.map((c) => c.name),
         product.attributes,
@@ -52,6 +55,10 @@ function bucketOf(product: Product): string {
         profile.stitch,
         profile.tipShape,
     ].join('-');
+}
+
+function materialBucketOf(product: Product): string {
+    return classifyMaterial(product).bucket;
 }
 
 function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
@@ -70,9 +77,15 @@ export function selectCombos(products: Product[], faces: FaceItem[], count: numb
 
     const rand = lcg(19826);
 
-    const productBuckets = [...groupBy(products, bucketOf).entries()]
+    // Balance construction and material together. Without this second key, a large group of
+    // smooth calf straps can consume the round-robin turns and leave exotic materials invisible.
+    const productBuckets = [...groupBy(products, (product) => `${materialBucketOf(product)}::${bucketOf(product)}`).entries()]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([bucket, items]) => ({ bucket, items: shuffled(items, rand) }));
+        .map(([key, items]) => ({
+            bucket: items.length > 0 ? bucketOf(items[0]) : key,
+            materialBucket: items.length > 0 ? materialBucketOf(items[0]) : key,
+            items: shuffled(items, rand),
+        }));
 
     const faceBuckets = [...groupBy(faces, (f) => f.category).entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -121,6 +134,8 @@ export function selectCombos(products: Product[], faces: FaceItem[], count: numb
             faceKey: face.key,
             faceName: face.name,
             bucket: pb.bucket,
+            material: classifyMaterial(product),
+            materialBucket: pb.materialBucket,
         });
     }
 

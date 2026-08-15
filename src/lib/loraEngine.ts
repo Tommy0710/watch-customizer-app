@@ -7,13 +7,16 @@ import { buildSegmentedDraft, computeSegmentedLayout } from './segmentedDraft';
 import { trimSpringBarPins, measureSegment, measureFace } from './segmentFit';
 import { removeWhiteBackground } from './removeWhiteBackground';
 import { assessDraft, type DraftAssessment } from './draftStandard';
-import { buildLoraPrompt } from './loraPrompt';
+import { buildLoraPrompt, buildMaterialAwareLoraPrompt, LORA_PROMPT_SCHEMA } from './loraPrompt';
+import { buildMaterialClause, classifyMaterial } from './materialTaxonomy';
+import { buildStrapProfileClause, classifyStrap, type Attribute } from './strapProfile';
 import { getObjectBuffer, cleanStrapKey, getPresignedUrl } from './aws';
 import { normaliseLoraWeights, parseS3WeightsKey } from './loraWeights';
 import {
     getLoraModel,
     getLoraPromptStrength,
     getLoraSeed,
+    getLoraPromptSchema,
     DEFAULT_LORA_SCALE,
     DEFAULT_LORA_STEPS,
 } from './loraConfig';
@@ -147,6 +150,8 @@ export async function generateWithLora(options: {
     strapId: number | undefined;
     faceBuffer: Buffer;
     productName: string;
+    categories?: string[];
+    attributes?: Attribute[];
 }): Promise<LoraOutcome> {
     const weights = await resolveLoraWeights(process.env.REPLICATE_LORA_WEIGHTS);
     if (!weights) {
@@ -175,10 +180,17 @@ export async function generateWithLora(options: {
     }
 
     const startedAt = Date.now();
+    const prompt = getLoraPromptSchema() === LORA_PROMPT_SCHEMA
+        ? buildMaterialAwareLoraPrompt(
+            options.productName,
+            buildStrapProfileClause(classifyStrap(options.productName, options.categories ?? [], options.attributes ?? [])),
+            buildMaterialClause(classifyMaterial({ name: options.productName, categories: options.categories ?? [], attributes: options.attributes ?? [] })),
+        )
+        : buildLoraPrompt(options.productName);
     const output: unknown = await options.replicate.run(LORA_MODEL as `${string}/${string}`, {
         input: {
             seed: LORA_SEED,
-            prompt: buildLoraPrompt(options.productName),
+            prompt,
             image: `data:image/png;base64,${draft.toString('base64')}`,
             prompt_strength: LORA_PROMPT_STRENGTH,
             lora_weights: weights,

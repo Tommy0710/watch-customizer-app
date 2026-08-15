@@ -40,6 +40,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
 
     // Lọc trước các sản phẩm thoả mãn Search và Category hiện tại
     const baseProducts = initialProducts.filter(product => {
+      if (product.stockStatus && product.stockStatus !== 'instock') return false;
       const isAllowedProduct = product.categories?.some(c => ALLOWED_CATEGORIES.includes(c.name));
       if (!isAllowedProduct) return false;
 
@@ -79,6 +80,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
     if (!initialProducts) return [];
 
     return initialProducts.filter(product => {
+      if (product.stockStatus && product.stockStatus !== 'instock') return false;
       // 0. Loại bỏ các sản phẩm không thuộc danh sách ALLOWED_CATEGORIES
       const isAllowedProduct = product.categories?.some(c => ALLOWED_CATEGORIES.includes(c.name));
       if (!isAllowedProduct) return false;

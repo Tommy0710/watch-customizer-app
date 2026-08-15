@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import { describeError } from '../lib/reportError';
+import type { Combo } from './selectCombos';
 
 // Packs approved pairs into the layout replicate/fast-flux-kontext-trainer expects: a flat zip of
 // NNN_start.jpg / NNN_end.jpg, no captions (the shared prompt instruction covers every pair).
@@ -91,8 +92,17 @@ async function main() {
     const sourceManifest = await exists(path.join(OUT_DIR, 'pairs-train.json'))
         ? JSON.parse(await readFile(path.join(OUT_DIR, 'pairs-train.json'), 'utf8'))
         : [];
+    const combosFile = await exists(path.join(OUT_DIR, 'combos.json'))
+        ? JSON.parse(await readFile(path.join(OUT_DIR, 'combos.json'), 'utf8')) as { train?: Combo[]; heldOut?: Combo[] }
+        : {};
+    const comboById = new Map([...combosFile.train ?? [], ...combosFile.heldOut ?? []].map((combo) => [combo.id, combo]));
+    const materialCoverage: Record<string, number> = {};
+    for (const id of packedIds) {
+        const material = comboById.get(id)?.material?.family ?? 'unknown';
+        materialCoverage[material] = (materialCoverage[material] ?? 0) + 1;
+    }
     await writeFile(path.join(OUT_DIR, 'dataset-manifest.json'), JSON.stringify({
-        manifestVersion: 1,
+        manifestVersion: 2,
         packed,
         approved: packedIds,
         requestedApproved: approved,
@@ -100,6 +110,7 @@ async function main() {
         reviewed: await exists(approvedPath),
         canvas: { width: PACK_WIDTH, height: PACK_HEIGHT },
         format: 'jpg-4:4:4-quality-95',
+        materialCoverage,
     }, null, 2));
     console.log(`✅ ${packed} pairs → ${zipPath}`);
     process.exit(0);

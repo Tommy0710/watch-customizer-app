@@ -7,6 +7,7 @@ import { measureStrapColour, compareStrapColour } from '../../src/lib/strapColou
 import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
+import { activeMaterialFamilies, classifyMaterial } from './materialTaxonomy';
 import { describeError } from '../lib/reportError';
 
 // Turns each staged catalog photo into a canonical studio render of the same strap: laid
@@ -163,8 +164,12 @@ async function main() {
     // half: 443 straps are clickable in the UI, and a pre-launch run has to cover all of them.
     if (flag('all')) {
         const { getDatabaseProducts } = await import('../../src/lib/woocommerce');
-        const visible = (await getDatabaseProducts())
-            .filter((p) => p.categories.some((c) => UI_CATEGORIES.includes(c.name)));
+        const catalog = await getDatabaseProducts();
+        const activeFamilies = activeMaterialFamilies(catalog);
+        const visible = catalog
+            .filter((p) => p.categories.some((c) => UI_CATEGORIES.includes(c.name))
+                && activeFamilies.has(classifyMaterial(p).family)
+                && (flag('include-out-of-stock') || !p.stockStatus || p.stockStatus === 'instock'));
         for (const p of visible) {
             if (byProduct.has(p.id) || !p.image) continue;
             // Only the fields this script reads are real; the rest exist to satisfy the Combo type
@@ -174,6 +179,7 @@ async function main() {
                 id: `${p.id}`, productId: p.id, productName: p.name, strapImage: p.image,
                 categories: p.categories.map((c) => c.name), attributes: p.attributes,
                 faceKey: '', faceName: '', bucket: '',
+                material: classifyMaterial(p), materialBucket: classifyMaterial(p).bucket,
             });
         }
         console.log(`📚 full catalog: ${visible.length} straps visible in the UI`);

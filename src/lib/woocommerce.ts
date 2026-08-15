@@ -15,6 +15,7 @@ export type Product = {
   attributes: Attribute[];
   categories: Category[];
   tags: Tag[];
+  stockStatus?: 'instock' | 'outofstock' | 'onbackorder' | string;
 };
 
 // 2. Gắn Type <Product[]> vào hàm để TypeScript hiểu
@@ -36,6 +37,7 @@ export const getDatabaseProducts = async (): Promise<Product[]> => {
       attributes: product.attributes || [],
       categories: product.categories || [],
       tags: product.tags || [],
+      stockStatus: product.stockStatus || 'instock',
     })) as Product[]; // Ép kiểu mạnh tay báo cho TypeScript biết đây là Product chuẩn
     
   } catch (error) {

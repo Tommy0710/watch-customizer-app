@@ -12,15 +12,16 @@ const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const TRAINER_OWNER = 'ostris';
 const TRAINER_NAME = 'flux-dev-lora-trainer';
 
-const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-
 function arg(name: string, fallback: string): string {
     const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
     return hit ? hit.slice(name.length + 3) : fallback;
 }
 
+function flag(name: string): boolean { return process.argv.includes(`--${name}`); }
+
 async function main() {
     const steps = Number(arg('steps', '1000'));
+    const dryRun = flag('dry-run');
     // Overridable so a stuck destination model (see the 2026-08-12/13 weight-serving incident —
     // both versions of tommy0710/watch-lora stopped serving weights right after a new version
     // landed) can be worked around by training into a fresh model, without losing the ability to
@@ -28,11 +29,18 @@ async function main() {
     const DESTINATION = arg('destination', 'tommy0710/watch-lora');
     const zip = await readFile(path.join(OUT_DIR, 'style-dataset.zip'));
 
-    const model = await replicate.models.get(TRAINER_OWNER, TRAINER_NAME);
-    const version = model.latest_version!.id;
-
     console.log(`📦 style-dataset.zip ${(zip.length / 1024 / 1024).toFixed(1)} MB`);
     console.log(`🎯 ${DESTINATION} · ${steps} steps · trigger "${TRIGGER_WORD}" · seed 19826`);
+    if (dryRun) {
+        console.log('✅ dry-run: dataset preflight complete; no upload or training request made');
+        return;
+    }
+    if (!flag('confirm-paid') || process.env.ALLOW_PAID_TRAINING !== '1') {
+        throw new Error('Paid training blocked. Pass --confirm-paid and set ALLOW_PAID_TRAINING=1 only after reviewing the manifest.');
+    }
+    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+    const model = await replicate.models.get(TRAINER_OWNER, TRAINER_NAME);
+    const version = model.latest_version!.id;
 
     // Uploaded first and passed by URL: handing the trainer an inline File is what made the other
     // trainer answer with a bare 500, and there is no reason to risk the same here.
