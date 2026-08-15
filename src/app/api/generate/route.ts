@@ -179,6 +179,7 @@ export async function POST(request: Request) {
                 const attempt = await generateWithLora({
                     replicate,
                     strapId,
+                    strapImage,
                     faceBuffer,
                     productName: strapName,
                     categories: strapCategories,
@@ -194,6 +195,7 @@ export async function POST(request: Request) {
                         engine: 'lora',
                         seconds: attempt.seconds,
                         draftMeetsStandard: attempt.assessment.ok,
+                        loraTestMode: attempt.testMode ? 'force' : 'off',
                         ...(didCropJustNow ? { croppedFace: `data:image/jpeg;base64,${faceBuffer.toString('base64')}` } : {}),
                     });
                 }

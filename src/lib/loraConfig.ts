@@ -10,6 +10,7 @@ export const DEFAULT_LORA_PROMPT_STRENGTH = 0.35;
 export const DEFAULT_LORA_SCALE = 1;
 export const DEFAULT_LORA_STEPS = 30;
 export const DEFAULT_LORA_PROMPT_SCHEMA = 'legacy';
+export type LoraTestMode = 'off' | 'force';
 
 export function getLoraModel(): string {
     return process.env.REPLICATE_LORA_MODEL?.trim() || DEFAULT_LORA_MODEL;
@@ -27,4 +28,9 @@ export function getLoraPromptStrength(): number {
 
 export function getLoraPromptSchema(): string {
     return process.env.REPLICATE_LORA_PROMPT_SCHEMA?.trim() || DEFAULT_LORA_PROMPT_SCHEMA;
+}
+
+/** Explicit smoke-test mode for trying the existing LoRA on catalog photos without clean renders. */
+export function getLoraTestMode(): LoraTestMode {
+    return process.env.LORA_TEST_MODE === 'force' ? 'force' : 'off';
 }

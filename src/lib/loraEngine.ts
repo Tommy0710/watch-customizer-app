@@ -3,6 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import type Replicate from 'replicate';
 import { splitStrapSegments } from './strapSegments';
+import { buildDraftComposite } from './draftComposite';
 import { buildSegmentedDraft, computeSegmentedLayout } from './segmentedDraft';
 import { trimSpringBarPins, measureSegment, measureFace } from './segmentFit';
 import { removeWhiteBackground } from './removeWhiteBackground';
@@ -17,6 +18,7 @@ import {
     getLoraPromptStrength,
     getLoraSeed,
     getLoraPromptSchema,
+    getLoraTestMode,
     DEFAULT_LORA_SCALE,
     DEFAULT_LORA_STEPS,
 } from './loraConfig';
@@ -91,15 +93,27 @@ async function resolveLoraWeights(value: string | undefined): Promise<string | u
 }
 
 export type LoraOutcome =
-    | { ok: true; imageUrl: string; assessment: DraftAssessment; seconds: number }
+    | { ok: true; imageUrl: string; assessment: DraftAssessment; seconds: number; testMode: boolean }
     | { ok: false; reason: string };
 
-async function loadCleanStrapRender(strapId: number | undefined): Promise<Buffer | null> {
-    if (!strapId) return null;
+async function loadCleanStrapRender(strapId: number | undefined, catalogUrl?: string): Promise<Buffer | null> {
+    if (!strapId && getLoraTestMode() !== 'force') return null;
     try {
-        if (CLEAN_STRAP_DIR) return await readFile(path.join(CLEAN_STRAP_DIR, `${strapId}.webp`));
-        const { buffer } = await getObjectBuffer(cleanStrapKey(strapId));
-        return buffer;
+        if (strapId && CLEAN_STRAP_DIR) return await readFile(path.join(CLEAN_STRAP_DIR, `${strapId}.webp`));
+        if (strapId) {
+            const { buffer } = await getObjectBuffer(cleanStrapKey(strapId));
+            return buffer;
+        }
+    } catch {
+    }
+    if (getLoraTestMode() !== 'force' || !catalogUrl) return null;
+    try {
+        if (catalogUrl.startsWith('data:image/')) {
+            return Buffer.from(catalogUrl.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+        }
+        const response = await fetch(catalogUrl);
+        if (!response.ok) return null;
+        return Buffer.from(await response.arrayBuffer());
     } catch {
         return null;
     }
@@ -150,6 +164,7 @@ export async function generateWithLora(options: {
     strapId: number | undefined;
     faceBuffer: Buffer;
     productName: string;
+    strapImage?: string;
     categories?: string[];
     attributes?: Attribute[];
 }): Promise<LoraOutcome> {
@@ -158,24 +173,27 @@ export async function generateWithLora(options: {
         return { ok: false, reason: 'REPLICATE_LORA_WEIGHTS is not set' };
     }
 
-    const cleanRender = await loadCleanStrapRender(options.strapId);
+    const forceTest = getLoraTestMode() === 'force';
+    const cleanRender = await loadCleanStrapRender(options.strapId, options.strapImage);
     if (!cleanRender) {
         return { ok: false, reason: `no clean studio render on file for strap ${options.strapId ?? '(no id sent)'}` };
     }
 
     const segments = await splitStrapSegments(cleanRender);
-    if (!segments) {
+    if (!segments && !forceTest) {
         return { ok: false, reason: `the render for strap ${options.strapId} could not be split into two segments` };
     }
 
-    const [draft, assessment] = await Promise.all([
-        buildSegmentedDraft(segments, options.faceBuffer),
-        assess(segments, options.faceBuffer),
-    ]);
+    const draft = segments
+        ? await buildSegmentedDraft(segments, options.faceBuffer)
+        : await buildDraftComposite(cleanRender, options.faceBuffer);
+    const assessment = segments
+        ? await assess(segments, options.faceBuffer)
+        : { ok: false, reasons: ['force test used the catalog strap photo instead of a clean render'] };
     // Standing down rather than generating anyway. A below-standard draft produces a watch a
     // reviewer would reject, and PRO — slower and dearer, but proven — produces one they would not.
     // A customer waiting on a Combine click should get the better picture, not the cheaper one.
-    if (!assessment.ok) {
+    if (!assessment.ok && !forceTest) {
         return { ok: false, reason: `draft is below standard — ${assessment.reasons.join('; ')}` };
     }
 
@@ -208,5 +226,6 @@ export async function generateWithLora(options: {
         imageUrl: firstOutputUrl(output),
         assessment,
         seconds: (Date.now() - startedAt) / 1000,
+        testMode: forceTest,
     };
 }

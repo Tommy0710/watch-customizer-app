@@ -90,6 +90,20 @@ Review `scripts/dataset/out/eval-*.html` theo rubric: assembly, strap fidelity, 
 4. Theo dõi engine, latency, lỗi LoRA, fallback rate và feedback ảnh.
 5. Rollback bằng cách đặt `GENERATE_ENGINE=pro` hoặc xóa weights.
 
+### Smoke-test toàn catalog (chỉ dùng tạm thời)
+
+Để thử LoRA trên cả những dây chưa có clean render, đặt `LORA_TEST_MODE=force` ở môi trường
+production. Chế độ này dùng ảnh catalog làm draft thay thế, đánh dấu response là `loraTestMode=force`
+và vẫn fallback PRO nếu LoRA lỗi. Chất lượng không được coi là benchmark vì draft catalog nằm ngoài
+phân phối train. Xóa biến này sau khi test để quay về gate chuẩn.
+
+```bash
+GENERATE_ENGINE=lora LORA_TEST_MODE=force
+```
+
+Không bật `REPLICATE_LORA_PROMPT_SCHEMA=material-v2` với weights cũ; weights production hiện tại
+dùng `legacy`. Chỉ bật schema mới sau khi train và evaluate weights mới.
+
 Không gỡ PRO cho tới khi pilot và canary đều đạt ngưỡng chất lượng.
 
 ## Retraining
