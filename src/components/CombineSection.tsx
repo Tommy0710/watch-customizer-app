@@ -19,6 +19,9 @@ export default function CombineSection() {
   const [showZoomModal, setShowZoomModal] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
   const zoomImageRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0, hasMoved: false });
 
   useEffect(() => {
     if (!isGenerating) {
@@ -61,6 +64,33 @@ export default function CombineSection() {
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
   }, [showZoomModal]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!viewportRef.current) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      startX: e.pageX,
+      startY: e.pageY,
+      scrollLeft: viewportRef.current.scrollLeft,
+      scrollTop: viewportRef.current.scrollTop,
+      hasMoved: false,
+    };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !viewportRef.current) return;
+    const deltaX = e.pageX - dragStartRef.current.startX;
+    const deltaY = e.pageY - dragStartRef.current.startY;
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+      dragStartRef.current.hasMoved = true;
+    }
+    viewportRef.current.scrollLeft = dragStartRef.current.scrollLeft - deltaX;
+    viewportRef.current.scrollTop = dragStartRef.current.scrollTop - deltaY;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   const currentStepLabel = [...PROCESSING_STEPS]
     .reverse()
@@ -270,14 +300,27 @@ export default function CombineSection() {
             </div>
           </div>
 
-          {/* Scrollable Viewport — allows scrolling smoothly from top buckle down to bottom tail tip when zoomed in! */}
+          {/* Scrollable Viewport with Mouse Drag & Wheel Panning */}
           <div 
-            className="flex-1 w-full overflow-y-auto overflow-x-auto flex items-start justify-center p-2 sm:p-4 cursor-zoom-out"
+            ref={viewportRef}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            className={`flex-1 w-full overflow-y-auto overflow-x-auto flex items-start justify-center p-2 sm:p-4 select-none ${
+              isDragging ? 'cursor-grabbing' : 'cursor-zoom-out'
+            }`}
           >
             <div 
               ref={zoomImageRef}
-              className="flex flex-col items-center justify-center m-auto transition-all duration-200 ease-out py-6 cursor-default"
-              onClick={(e) => e.stopPropagation()}
+              onMouseDown={handleMouseDown}
+              className={`flex flex-col items-center justify-center m-auto transition-all duration-200 ease-out py-6 ${
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
+              onClick={(e) => {
+                if (dragStartRef.current.hasMoved) {
+                  e.stopPropagation();
+                }
+              }}
               style={{
                 height: `${zoomScale * 0.8}vh`,
                 minHeight: zoomScale <= 100 ? '0px' : `${zoomScale * 0.8}vh`,
@@ -286,7 +329,7 @@ export default function CombineSection() {
               <img 
                 src={resultImage} 
                 alt="High-Res Result" 
-                className="h-full w-auto max-w-none object-contain rounded shadow-2xl select-none"
+                className="h-full w-auto max-w-none object-contain rounded shadow-2xl select-none pointer-events-none"
                 draggable={false}
               />
             </div>
