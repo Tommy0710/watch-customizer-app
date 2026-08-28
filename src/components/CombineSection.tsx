@@ -30,11 +30,19 @@ export default function CombineSection() {
     return () => clearInterval(intervalId);
   }, [isGenerating]);
 
-  // Reset zoom level to 100% when opening zoom modal
+  // Reset zoom level to 100% and listen for Escape key when opening zoom modal
   useEffect(() => {
-    if (showZoomModal) {
-      setZoomScale(100);
-    }
+    if (!showZoomModal) return;
+    setZoomScale(100);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowZoomModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showZoomModal]);
 
   const currentStepLabel = [...PROCESSING_STEPS]
@@ -247,17 +255,16 @@ export default function CombineSection() {
 
           {/* Interactive Zoomable Image Display */}
           <div 
-            className="flex-1 w-full flex items-center justify-center overflow-auto p-4 my-2 cursor-grab active:cursor-grabbing"
-            onClick={(e) => e.stopPropagation()}
+            className="flex-1 w-full flex items-center justify-center overflow-auto p-4 my-2 cursor-zoom-out"
           >
             <div 
-              className="transition-transform duration-200 ease-out flex items-center justify-center"
+              className="transition-transform duration-200 ease-out flex items-center justify-center pointer-events-none"
               style={{ transform: `scale(${zoomScale / 100})` }}
             >
               <img 
                 src={resultImage} 
                 alt="High-Res Result" 
-                className="max-h-[80vh] w-auto object-contain rounded shadow-2xl select-none"
+                className="max-h-[80vh] w-auto object-contain rounded shadow-2xl select-none pointer-events-auto"
                 draggable={false}
               />
             </div>
