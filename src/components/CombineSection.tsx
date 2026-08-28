@@ -97,10 +97,10 @@ export default function CombineSection() {
         <h2 className="text-sm tracking-widest text-gray-400 uppercase font-semibold mb-4 text-center flex-shrink-0">
           3. Generated Result
         </h2>
-        <div className="flex-1 w-full rounded-lg flex flex-col items-center justify-center text-gray-400 bg-white border border-gray-100 shadow-sm overflow-hidden p-4 relative">
+        <div className="flex-1 w-full rounded-xl flex flex-col items-center justify-between text-gray-400 bg-white border border-gray-100 shadow-sm overflow-hidden p-3 relative min-h-0">
 
           {isGenerating ? (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex-1 w-full flex flex-col items-center justify-center gap-4">
               <div className="w-20 h-20 rounded-full border border-black/15 bg-white shadow-sm flex items-center justify-center">
                 <div className="flex items-end gap-1 h-8">
                   {[0, 1, 2, 3, 4].map((i) => (
@@ -116,32 +116,43 @@ export default function CombineSection() {
               <p className="text-[11px] text-gray-400 tabular-nums">{elapsedSeconds}s</p>
             </div>
           ) : resultImage ? (
-            <div className="relative w-full h-full flex flex-col items-center justify-between">
+            <div className="relative w-full h-full flex flex-col items-center justify-between min-h-0">
+              {/* Image Preview Container with comfortable padding */}
               <div 
-                className="flex-1 w-full flex items-center justify-center cursor-zoom-in group relative"
+                className="flex-1 w-full min-h-0 flex items-center justify-center cursor-zoom-in group relative p-3 overflow-hidden"
                 onClick={() => setShowZoomModal(true)}
-                title="Click to zoom HD"
+                title="Nhấp để phóng to chi tiết HD"
               >
-                <img src={resultImage} alt="Generated result" className="max-w-full max-h-full object-contain drop-shadow-sm" />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm">
-                  🔍 Click to Zoom HD
+                <img 
+                  src={resultImage} 
+                  alt="Generated result" 
+                  className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-[1.02]" 
+                />
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+                  🔍 Click để phóng to HD
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="w-full flex items-center justify-center gap-2 pt-2 border-t border-gray-100 flex-shrink-0">
+              {/* Action Buttons Bar */}
+              <div className="w-full flex items-center justify-center gap-2 pt-2.5 border-t border-gray-100 flex-shrink-0 bg-white">
                 <button
                   onClick={handleDownload}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   ⬇️ Tải Ảnh HD
+                </button>
+                <button
+                  onClick={() => setShowZoomModal(true)}
+                  className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  🔍 Phóng To
                 </button>
                 {productUrl && (
                   <a
                     href={productUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-black hover:bg-zinc-800 text-white text-xs font-semibold rounded-md transition-colors flex items-center gap-1"
+                    className="px-3.5 py-1.5 bg-black hover:bg-zinc-800 text-white text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 shadow-xs"
                   >
                     🛍️ Đặt Mua Dây Này
                   </a>
@@ -149,7 +160,9 @@ export default function CombineSection() {
               </div>
             </div>
           ) : (
-            <p className="text-center text-sm px-4">Your combined result will appear here after you press Combine.</p>
+            <div className="flex-1 w-full flex items-center justify-center">
+              <p className="text-center text-sm px-4">Your combined result will appear here after you press Combine.</p>
+            </div>
           )}
 
         </div>
