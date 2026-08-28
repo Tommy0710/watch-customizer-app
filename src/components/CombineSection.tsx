@@ -121,7 +121,7 @@ export default function CombineSection() {
               <div 
                 className="flex-1 w-full min-h-0 flex items-center justify-center cursor-zoom-in group relative p-3 overflow-hidden"
                 onClick={() => setShowZoomModal(true)}
-                title="Nhấp để phóng to chi tiết HD"
+                title="Nhấp để phóng to"
               >
                 <img 
                   src={resultImage} 
@@ -129,34 +129,18 @@ export default function CombineSection() {
                   className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-[1.02]" 
                 />
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
-                  🔍 Click để phóng to HD
+                  Phóng to
                 </div>
               </div>
 
               {/* Action Buttons Bar */}
-              <div className="w-full flex items-center justify-center gap-2 pt-2.5 border-t border-gray-100 flex-shrink-0 bg-white">
+              <div className="w-full flex items-center justify-center pt-2.5 border-t border-gray-100 flex-shrink-0 bg-white">
                 <button
                   onClick={handleDownload}
-                  className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="px-5 py-2 bg-black hover:bg-zinc-800 text-white text-xs font-medium tracking-wide rounded-md transition-colors cursor-pointer shadow-xs"
                 >
-                  ⬇️ Tải Ảnh HD
+                  Tải xuống
                 </button>
-                <button
-                  onClick={() => setShowZoomModal(true)}
-                  className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  🔍 Phóng To
-                </button>
-                {productUrl && (
-                  <a
-                    href={productUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 py-1.5 bg-black hover:bg-zinc-800 text-white text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 shadow-xs"
-                  >
-                    🛍️ Đặt Mua Dây Này
-                  </a>
-                )}
               </div>
             </div>
           ) : (
@@ -198,15 +182,15 @@ export default function CombineSection() {
             <div className="flex items-center gap-4 mt-3">
               <button 
                 onClick={handleDownload}
-                className="px-4 py-2 bg-white text-black text-xs font-bold rounded-full hover:bg-gray-200 cursor-pointer"
+                className="px-4 py-2 bg-white text-black text-xs font-semibold rounded-full hover:bg-gray-200 cursor-pointer"
               >
-                ⬇️ Tải Ảnh Về Máy
+                Tải xuống
               </button>
               <button 
                 onClick={() => setShowZoomModal(false)}
-                className="px-4 py-2 bg-zinc-800 text-white text-xs font-bold rounded-full hover:bg-zinc-700 cursor-pointer"
+                className="px-4 py-2 bg-zinc-800 text-white text-xs font-semibold rounded-full hover:bg-zinc-700 cursor-pointer"
               >
-                ✕ Đóng
+                Đóng
               </button>
             </div>
           </div>
