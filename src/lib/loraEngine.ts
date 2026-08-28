@@ -99,8 +99,21 @@ export type LoraOutcome =
 async function loadCleanStrapRender(strapId: number | undefined, catalogUrl?: string): Promise<Buffer | null> {
     if (!strapId && getLoraTestMode() !== 'force') return null;
     try {
-        if (strapId && CLEAN_STRAP_DIR) return await readFile(path.join(CLEAN_STRAP_DIR, `${strapId}.webp`));
         if (strapId) {
+            if (CLEAN_STRAP_DIR) {
+                const dir = path.isAbsolute(CLEAN_STRAP_DIR) ? CLEAN_STRAP_DIR : path.join(process.cwd(), CLEAN_STRAP_DIR);
+                try {
+                    return await readFile(path.join(dir, `${strapId}.webp`));
+                } catch {
+                }
+            }
+            // Check default local dataset folder
+            const defaultLocalPath = path.join(process.cwd(), 'scripts/dataset/out/straps-clean', `${strapId}.webp`);
+            try {
+                return await readFile(defaultLocalPath);
+            } catch {
+            }
+            // Fallback to S3
             const { buffer } = await getObjectBuffer(cleanStrapKey(strapId));
             return buffer;
         }
@@ -205,21 +218,37 @@ export async function generateWithLora(options: {
             buildMaterialClause(classifyMaterial({ name: options.productName, categories: options.categories ?? [], attributes: options.attributes ?? [] })),
         )
         : buildLoraPrompt(options.productName);
-    const output: unknown = await options.replicate.run(LORA_MODEL as `${string}/${string}`, {
-        input: {
-            seed: LORA_SEED,
-            prompt,
-            image: `data:image/png;base64,${draft.toString('base64')}`,
-            prompt_strength: LORA_PROMPT_STRENGTH,
-            lora_weights: weights,
-            lora_scale: DEFAULT_LORA_SCALE,
-            megapixels: '1',
-            num_inference_steps: DEFAULT_LORA_STEPS,
-            output_format: 'webp',
-            output_quality: 90,
-            go_fast: false,
-        },
-    });
+    let output: unknown;
+    for (let attempt = 1; ; attempt++) {
+        try {
+            output = await options.replicate.run(LORA_MODEL as `${string}/${string}`, {
+                input: {
+                    seed: LORA_SEED,
+                    prompt,
+                    image: `data:image/png;base64,${draft.toString('base64')}`,
+                    prompt_strength: LORA_PROMPT_STRENGTH,
+                    lora_weights: weights,
+                    lora_scale: DEFAULT_LORA_SCALE,
+                    megapixels: '1',
+                    num_inference_steps: DEFAULT_LORA_STEPS,
+                    output_format: 'webp',
+                    output_quality: 90,
+                    go_fast: false,
+                },
+            });
+            break;
+        } catch (err: unknown) {
+            const message = String((err as { message?: string })?.message ?? err);
+            const status = (err as { response?: { status?: number; data?: { retry_after?: number } } })?.response?.status
+                ?? (err as { status?: number })?.status;
+            const retryAfter = (err as { response?: { data?: { retry_after?: number } } })?.response?.data?.retry_after ?? 3;
+            const retryable = status === 429 || (typeof status === 'number' && status >= 500) || message.includes('E005') || message.includes('throttled');
+            if (!retryable || attempt >= 3) throw err;
+            const waitMs = Math.max(retryAfter * 1000, 2000 * attempt);
+            console.warn(`    ⚠️ LoRA attempt ${attempt} throttled/failed (${message.slice(0, 80)}) — retrying in ${waitMs}ms`);
+            await new Promise((r) => setTimeout(r, waitMs));
+        }
+    }
 
     return {
         ok: true,

@@ -10,7 +10,25 @@ describe('runtime material taxonomy', () => {
 
   it('emits an explicit material identity clause for material-v2 captions', () => {
     const profile = classifyMaterial({ name: 'Navy Nubuck Leather Watch Strap' });
-    expect(buildMaterialClause(profile)).toContain('nubuck material');
-    expect(buildMaterialClause(profile)).toContain('suede-nap surface');
+    const clause = buildMaterialClause(profile);
+    expect(clause).toContain('suede/nubuck');
+    expect(clause).toContain('velvety nap');
+  });
+
+  it('classifies alligator with specialized scale tiles and groove prompt clause', () => {
+    const profile = classifyMaterial({ name: 'Matte Black Alligator Leather Watch Strap' });
+    expect(profile.family).toBe('alligator');
+    const clause = buildMaterialClause(profile);
+    expect(clause).toContain('alligator/crocodile');
+    expect(clause).toContain('scale tiles');
+  });
+
+  it('classifies stingray with specialized pearl granules surface and rich prompt clause', () => {
+    const profile = classifyMaterial({ name: 'Black Pearl Stingray Leather Watch Strap' });
+    expect(profile.family).toBe('stingray');
+    expect(profile.surface).toBe('stingray-pearl-granules');
+    const clause = buildMaterialClause(profile);
+    expect(clause).toContain('genuine stingray leather');
+    expect(clause).toContain('tight pebbled texture');
   });
 });

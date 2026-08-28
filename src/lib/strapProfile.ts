@@ -14,9 +14,10 @@ export type Attribute = { name: string; options: string[] };
 export type StrapProfile = {
     style: 'classic' | 'vintage';
     padded: boolean;
+    paddedStyle?: 'domed' | 'square';
     curvedEnd: boolean;
     foldedEdge: boolean;
-    stitch: 'micro' | 'double' | 'box' | 'standard' | 'none';
+    stitch: 'micro' | 'double' | 'box' | 'side-stitch' | 'standard' | 'none';
     tipShape: 'square' | 'oval' | 'pilot' | 'regular';
     thickness: 'slim' | 'standard' | 'thick' | 'super-thick' | 'over-thick';
     // Habana-leather padded straps are built differently from other padded straps: confirmed by
@@ -90,6 +91,12 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
         ? paddedAttr.toLowerCase() !== 'flat'
         : /padded/i.test(haystackCategories) || /padded/i.test(haystackName);
 
+    let paddedStyle: StrapProfile['paddedStyle'];
+    if (padded) {
+        if (paddedAttr && /domed/i.test(paddedAttr)) paddedStyle = 'domed';
+        else if (paddedAttr && /square/i.test(paddedAttr)) paddedStyle = 'square';
+    }
+
     // Habana material + padded is a distinct construction (see StrapProfile['habanaBuckleSidePadding']
     // doc comment) — only meaningful combined with `padded`, computed after it above.
     const materialAttr = findAttribute(attributes, 'Material');
@@ -131,11 +138,14 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
         else if (/micro/i.test(stitchAttr)) stitch = 'micro';
         else if (/double/i.test(stitchAttr)) stitch = 'double';
         else if (/box/i.test(stitchAttr)) stitch = 'box';
+        else if (/presile|side\s*stitch/i.test(stitchAttr)) stitch = 'side-stitch';
         else stitch = 'standard'; // e.g. "Classic Stitches" or an unrecognized value
     } else if (/micro stitch/i.test(haystackName)) {
         stitch = 'micro';
     } else if (/double stitch(ing)?/i.test(haystackName)) {
         stitch = 'double';
+    } else if (/side[- ]stitch|presile/i.test(haystackName)) {
+        stitch = 'side-stitch';
     } else if (isVintage) {
         // Vintage-construction straps are traditionally raw-edge/burnished, not top-stitched —
         // assume no stitching unless the name explicitly calls out a stitch style.
@@ -147,6 +157,7 @@ export function classifyStrap(name: string, categoryNames: string[], attributes:
     return {
         style: isVintage ? 'vintage' : 'classic',
         padded,
+        paddedStyle,
         curvedEnd,
         foldedEdge,
         stitch,
@@ -171,9 +182,9 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
         );
     }
 
-    if (profile.style === 'vintage') {
+    if (!profile.padded && !profile.habanaBuckleSidePadding) {
         sentences.push(
-            "This is a vintage-style strap: render its leather with a flat, smooth, understated surface — no raised or puffy padding, no glossy sheen, a worn-in matte vintage character.",
+            "This strap has a completely flat, unpadded cross-section with uniform thickness from edge to edge — no raised central ridge, no dome, no cushioning, and no puffy padding; render it completely flat across its full width.",
         );
     } else if (profile.habanaBuckleSidePadding) {
         const ridgeDescription = profile.doublePadded
@@ -185,7 +196,9 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
     } else if (profile.padded) {
         const ridgeDescription = profile.doublePadded
             ? 'two parallel raised padded ridges running side by side down its length'
-            : 'raised, slightly puffy edges along both sides';
+            : profile.paddedStyle === 'domed'
+            ? 'a smooth rounded domed cushion profile arching gently across the center'
+            : 'raised, defined square-padded ridges with bevelled edges';
         sentences.push(
             `This strap has a padded construction: preserve its ${ridgeDescription} rather than flattening them.`,
         );
@@ -193,13 +206,35 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
 
     if (profile.curvedEnd) {
         sentences.push(
-            'The strap ends are gently curved and contoured where they meet the case lugs, not squared off — preserve this curved end shape.',
+            "This strap has curved ends that contour flush against the round watch case: preserve the curved strap ends where they meet the case rather than rendering straight square ends.",
         );
     }
 
     if (profile.foldedEdge) {
         sentences.push(
-            'The strap edge is a folded-and-stitched construction, not a raw cut edge — reproduce this folded edge finish.',
+            "This strap has folded edges: the top leather wraps cleanly around the sides to the back rather than having painted edge dye or raw cut sides.",
+        );
+    }
+
+    if (profile.stitch === 'none') {
+        sentences.push(
+            "This strap has no visible stitching at all — a clean, smooth raw or burnished edge, no stitch lines, no thread, no seams of any kind visible; do not add any stitching.",
+        );
+    } else if (profile.stitch === 'micro') {
+        sentences.push(
+            "This strap has fine micro stitching along both edges — thin, closely spaced thread lines running down the sides.",
+        );
+    } else if (profile.stitch === 'double') {
+        sentences.push(
+            "This strap has double stitching with two parallel rows of thread along both edges.",
+        );
+    } else if (profile.stitch === 'box') {
+        sentences.push(
+            "This strap has box stitching with a closed rectangular stitch box at the lug ends.",
+        );
+    } else if (profile.stitch === 'side-stitch') {
+        sentences.push(
+            "This strap has minimal vintage side stitching: two short cross stitches right next to the lugs, with clean unstitched edges along the rest of the strap.",
         );
     }
 

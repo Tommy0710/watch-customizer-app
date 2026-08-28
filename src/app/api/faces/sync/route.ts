@@ -4,7 +4,13 @@ import { listAllFaceKeys } from '@/lib/aws';
 
 export const maxDuration = 60;
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  const syncSecret = process.env.SYNC_SECRET || process.env.CRON_SECRET;
+  if (syncSecret && authHeader !== `Bearer ${syncSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     console.log('⏳ Đang liệt kê ảnh mặt đồng hồ từ AWS S3...');
     const faces = await listAllFaceKeys();

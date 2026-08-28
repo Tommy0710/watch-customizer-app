@@ -8,6 +8,7 @@ import { getObjectBuffer } from '../../src/lib/aws';
 import { createSpendGuard, SpendExceededError } from '../lib/spendGuard';
 import type { Combo } from './selectCombos';
 import { activeMaterialFamilies, classifyMaterial } from './materialTaxonomy';
+import { isSelectableWatchStrap } from '../../src/lib/productEligibility';
 import { describeError } from '../lib/reportError';
 
 // Turns each staged catalog photo into a canonical studio render of the same strap: laid
@@ -26,28 +27,37 @@ import { describeError } from '../lib/reportError';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const STRAP_DIR = path.join(OUT_DIR, 'straps');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
-// The same two categories StrapSelector filters on. A strap outside them exists in MongoDB but is
-// never clickable, so rendering it would be paying for something no customer can reach.
-const UI_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
+// The same product rule StrapSelector filters on. Rendering another category or special clasp
+// would pay for a product the customer can never select.
 
-const CLEAN_STRAP_PROMPT =
-    'Reproduce the watch strap from this photo as a clean studio product image. Copy its leather ' +
-    'colour, grain, pattern, stitching, edge finishing, buckle, and punched holes exactly, ' +
-    'pixel-for-pixel, including any faint colour undertones such as green, blue, or purple patina ' +
-    '— never substitute a generic brown or plain black leather. Completely remove the staging: the ' +
-    'background surface, any large leather hide or swatch used as a backdrop, any rolled fabric or ' +
-    'cylinder prop the strap is draped over, and all shadows. THE SECOND IMAGE IS A GREY DIAGRAM ' +
-    'OF THE REQUIRED LAYOUT — reproduce its arrangement exactly: two separate pieces side by side, ' +
-    'both perfectly vertical, both starting at the same top edge, the left piece about two thirds ' +
-    'the length of the right piece. Take only the arrangement and the proportions from the ' +
-    'diagram; take the leather, colour and hardware from the first image. The left piece is the ' +
-    'short buckle piece: it carries the single metal buckle together with the keeper loops, and it ' +
-    'has NO punched holes. The right piece is the long tail: plain tapered leather with the row of ' +
-    'punched holes and a curved tip, carrying NO buckle and NO keeper loops. Never draw the same ' +
-    'piece twice, never mirror one piece to make the other, and never show more than one buckle ' +
-    'anywhere in the image. Photograph ' +
-    'top-down in sharp 8k focus with soft professional studio lighting on a pure solid white ' +
-    'background. Do not add a watch case, dial, or any other object.';
+export function buildCleanStrapPrompt(material?: { family: string; surface: string }): string {
+    const materialEmphasis = material?.family === 'stingray'
+        ? ' Material identity: genuine stingray leather with a continuous, uniform fine pebbled texture of tight round grains in its exact solid dye colour. Do not add white blotches, glitter, or diamond spots, and never render as flat leather or generic pebbled cowhide.'
+        : '';
+
+    return (
+        'Reproduce the watch strap from this photo as a clean studio product image.' +
+        materialEmphasis +
+        ' Copy its leather colour, grain, pattern, stitching, edge finishing, buckle, and punched holes exactly, ' +
+        'pixel-for-pixel, including any faint colour undertones such as green, blue, or purple patina ' +
+        '— never substitute a generic brown or plain black leather. Completely remove the staging: the ' +
+        'background surface, any large leather hide or swatch used as a backdrop, any rolled fabric or ' +
+        'cylinder prop the strap is draped over, and all shadows. THE SECOND IMAGE IS A GREY DIAGRAM ' +
+        'OF THE REQUIRED LAYOUT — reproduce its arrangement exactly: two separate pieces side by side, ' +
+        'both perfectly vertical, both starting at the same top edge, the left piece about two thirds ' +
+        'the length of the right piece. Take only the arrangement and the proportions from the ' +
+        'diagram; take the leather, colour and hardware from the first image. The left piece is the ' +
+        'short buckle piece: it carries the single metal buckle together with the keeper loops, and it ' +
+        'has NO punched holes. The right piece is the long tail: plain tapered leather with the row of ' +
+        'punched holes and a curved tip, carrying NO buckle and NO keeper loops. Never draw the same ' +
+        'piece twice, never mirror one piece to make the other, and never show more than one buckle ' +
+        'anywhere in the image. Photograph ' +
+        'top-down in sharp 8k focus with soft professional studio lighting on a pure solid white ' +
+        'background. Do not add a watch case, dial, or any other object.'
+    );
+}
+
+const CLEAN_STRAP_PROMPT = buildCleanStrapPrompt();
 
 // The layout is now shown rather than described, because describing it failed twice over.
 //
@@ -167,7 +177,7 @@ async function main() {
         const catalog = await getDatabaseProducts();
         const activeFamilies = activeMaterialFamilies(catalog);
         const visible = catalog
-            .filter((p) => p.categories.some((c) => UI_CATEGORIES.includes(c.name))
+            .filter((p) => isSelectableWatchStrap(p)
                 && activeFamilies.has(classifyMaterial(p).family)
                 && (flag('include-out-of-stock') || !p.stockStatus || p.stockStatus === 'instock'));
         for (const p of visible) {
@@ -278,7 +288,7 @@ async function main() {
                 // Varied per attempt: the same seed reproduces the same duplicated render exactly,
                 // so retrying without changing it would just buy the identical failure again.
                 seed: 19826 + attempt - 1,
-                prompt: CLEAN_STRAP_PROMPT,
+                prompt: buildCleanStrapPrompt(combo.material),
                 resolution: '1 MP',
                 aspect_ratio: '9:16',
                 input_images: [

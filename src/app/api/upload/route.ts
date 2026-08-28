@@ -26,6 +26,8 @@ export async function GET(request: Request) {
   }
 }
 
+let indexCreated = false;
+
 // POST: Điện thoại gọi vào đây để Gửi ảnh lên
 export async function POST(request: Request) {
   try {
@@ -34,9 +36,15 @@ export async function POST(request: Request) {
 
     const client = await clientPromise;
     const db = client.db('watch_customizer');
+    const sessionsCol = db.collection('sessions');
+
+    if (!indexCreated) {
+      sessionsCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: 1800 }).catch(() => {});
+      indexCreated = true;
+    }
     
     // Lưu ảnh vào DB (Upsert: Chưa có thì tạo, có rồi thì ghi đè)
-    await db.collection('sessions').updateOne(
+    await sessionsCol.updateOne(
       { sessionId },
       { $set: { sessionId, image, createdAt: new Date() } },
       { upsert: true }

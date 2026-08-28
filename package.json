@@ -16,8 +16,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
     "@aws-sdk/s3-request-presigner": "^3.1087.0",
-    "@google/design.md": "^0.3.0",
-    "@supabase/supabase-js": "^2.103.0",
     "@woocommerce/woocommerce-rest-api": "^1.0.2",
     "ai": "^7.0.52",
     "axios": "^1.15.0",

@@ -24,6 +24,15 @@ describe('classifyMaterial', () => {
         expect(classifyMaterial(product('Black Canvas Watch Strap')).family).toBe('canvas');
     });
 
+    it('classifies stingray with specialized pearl granules surface', () => {
+        expect(classifyMaterial(product('Blue Galuchat Stingray Watch Strap'))).toEqual({
+            family: 'stingray',
+            surface: 'stingray-pearl-granules',
+            bucket: 'stingray:stingray-pearl-granules',
+            source: 'name-or-category',
+        });
+    });
+
     it('falls back explicitly instead of inventing a material', () => {
         expect(classifyMaterial(product('Custom Watch Strap')).source).toBe('fallback');
     });

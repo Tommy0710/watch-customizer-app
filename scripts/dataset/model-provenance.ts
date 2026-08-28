@@ -12,10 +12,11 @@ const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 async function main() {
     const record = JSON.parse(
         await readFile(path.join(process.cwd(), 'scripts/dataset/out/training.json'), 'utf8'),
-    ) as { id: string; output?: { version?: string } };
+    ) as { id: string; output?: { version?: string; weights?: string } };
 
     const training = await replicate.trainings.get(record.id);
     const producedVersion = (training.output as { version?: string } | null)?.version ?? '';
+    const producedWeights = (training.output as { weights?: string } | null)?.weights ?? record.output?.weights ?? '';
     const serving = process.env.REPLICATE_LORA_WEIGHTS ?? '';
 
     console.log(`training ${record.id}`);
@@ -27,7 +28,7 @@ async function main() {
     if (serving) {
         const versionId = producedVersion.split(':')[1] ?? '';
         console.log(
-            serving.includes(versionId) && versionId
+            (serving === producedWeights || (serving.includes(versionId) && versionId))
                 ? '  ✅ points at the version this training produced — the model serving locally is the one trained here'
                 : '  ⚠️  does NOT match this training output',
         );

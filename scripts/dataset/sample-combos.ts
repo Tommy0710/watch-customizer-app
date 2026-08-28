@@ -4,9 +4,9 @@ import { getDatabaseProducts } from '../../src/lib/woocommerce';
 import { getDatabaseFaces } from '../../src/lib/aws';
 import { selectCombos, type Combo } from './selectCombos';
 import { activeMaterialFamilies, classifyMaterial } from './materialTaxonomy';
+import { isSelectableWatchStrap } from '../../src/lib/productEligibility';
 import { describeError } from '../lib/reportError';
 
-const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 
 function arg(name: string, fallback: string): string {
@@ -33,7 +33,7 @@ async function main() {
     // only as extra examples for a family that still has at least one sellable SKU. A family with
     // no sellable products is future catalog dead weight and must not enter training.
     const products = allProducts.filter((p) =>
-        p.categories.some((c) => ALLOWED_CATEGORIES.includes(c.name)) && Boolean(p.image)
+        isSelectableWatchStrap(p) && Boolean(p.image)
         && activeFamilies.has(classifyMaterial(p).family)
         && (includeOutOfStock || !p.stockStatus || p.stockStatus === 'instock'),
     );

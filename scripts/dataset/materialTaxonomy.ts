@@ -40,6 +40,7 @@ export type MaterialSurface =
     | 'scale'
     | 'hornback'
     | 'pebbled'
+    | 'stingray-pearl-granules'
     | 'embossed'
     | 'suede-nap'
     | 'woven'
@@ -69,7 +70,7 @@ const RULES: Rule[] = [
     { family: 'alligator', pattern: /alligator|croc(?:odile)?/i, surface: 'scale' },
     { family: 'python', pattern: /python/i, surface: 'scale' },
     { family: 'lizard', pattern: /lizard/i, surface: 'scale' },
-    { family: 'stingray', pattern: /stingray/i, surface: 'pebbled' },
+    { family: 'stingray', pattern: /stingray|galuchat|shagreen/i, surface: 'stingray-pearl-granules' },
     { family: 'ostrich', pattern: /ostrich/i, surface: 'pebbled' },
     { family: 'peccary', pattern: /peccary/i, surface: 'pebbled' },
     { family: 'shark', pattern: /shark/i, surface: 'pebbled' },

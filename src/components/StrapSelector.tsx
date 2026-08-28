@@ -3,10 +3,10 @@
 import { useState, useMemo } from 'react';
 import type { Product } from '@/lib/woocommerce';
 import { useAppStore } from '@/store/useAppStore';
+import { ALLOWED_STRAP_CATEGORIES, isSelectableWatchStrap } from '@/lib/productEligibility';
 
-const ALLOWED_CATEGORIES = ['Classic Watch Straps', 'Vintage Watch Straps'];
-// Thêm danh sách các thuộc tính được phép hiển thị trên bộ lọc (Thay đổi theo tên thuộc tính thực tế trên WooCommerce của bạn)
-const ALLOWED_ATTRIBUTES = ['Color', 'Size', 'Material'];
+// Danh sách các thuộc tính được phép hiển thị trên bộ lọc
+const ALLOWED_ATTRIBUTES = ['Material', 'Color', 'Padded', 'Style of Stitch'];
 
 export default function StrapSelector({ initialProducts }: { initialProducts: Product[] }) {
   // 1. Quản lý State cho Lọc và Tìm kiếm
@@ -27,7 +27,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
     initialProducts.forEach(product => {
       // Lấy danh mục (Chỉ thêm vào bộ lọc nếu category đó nằm trong danh sách ALLOWED_CATEGORIES)
       product.categories?.forEach(c => {
-        if (ALLOWED_CATEGORIES.includes(c.name)) catSet.add(c.name);
+        if (ALLOWED_STRAP_CATEGORIES.includes(c.name as typeof ALLOWED_STRAP_CATEGORIES[number])) catSet.add(c.name);
       });
     });
 
@@ -41,7 +41,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
     // Lọc trước các sản phẩm thoả mãn Search và Category hiện tại
     const baseProducts = initialProducts.filter(product => {
       if (product.stockStatus && product.stockStatus !== 'instock') return false;
-      const isAllowedProduct = product.categories?.some(c => ALLOWED_CATEGORIES.includes(c.name));
+      const isAllowedProduct = isSelectableWatchStrap(product);
       if (!isAllowedProduct) return false;
 
       if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -82,7 +82,7 @@ export default function StrapSelector({ initialProducts }: { initialProducts: Pr
     return initialProducts.filter(product => {
       if (product.stockStatus && product.stockStatus !== 'instock') return false;
       // 0. Loại bỏ các sản phẩm không thuộc danh sách ALLOWED_CATEGORIES
-      const isAllowedProduct = product.categories?.some(c => ALLOWED_CATEGORIES.includes(c.name));
+      const isAllowedProduct = isSelectableWatchStrap(product);
       if (!isAllowedProduct) return false;
 
       // Lọc theo từ khóa tìm kiếm (Search)

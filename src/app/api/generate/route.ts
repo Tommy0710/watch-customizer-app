@@ -11,6 +11,7 @@ import { PRO_ASSEMBLY_PROMPT } from '@/lib/proPrompt';
 import { generateWithLora } from '@/lib/loraEngine';
 import { getLoraTestMode } from '@/lib/loraConfig';
 import { describeError } from '@/lib/redactError';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const replicate = new Replicate({
     auth: process.env.REPLICATE_API_TOKEN,
@@ -122,6 +123,23 @@ async function cropToWatchFace(faceBuffer: Buffer): Promise<Buffer> {
 
 export async function POST(request: Request) {
     try {
+        const forwarded = request.headers.get('x-forwarded-for');
+        const clientIp = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+        const rateLimit = checkRateLimit(clientIp, 12, 60000);
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { error: 'Quá nhiều yêu cầu tạo ảnh. Vui lòng thử lại sau giây lát.' },
+                {
+                    status: 429,
+                    headers: { 'Retry-After': String(Math.ceil(rateLimit.resetInMs / 1000)) },
+                }
+            );
+        }
+
+        if (!process.env.REPLICATE_API_TOKEN) {
+            return NextResponse.json({ error: 'Server configuration error: REPLICATE_API_TOKEN is missing' }, { status: 500 });
+        }
+
         const { strapImage, faceImage, faceAlreadyCropped = false, strapName = '', strapCategories = [], strapAttributes = [], strapId } = await request.json();
 
         if (!strapImage || !faceImage) {
@@ -229,6 +247,18 @@ export async function POST(request: Request) {
         // 2. Read the watch strap image
         let strapBuffer: Buffer;
         if (strapImage.startsWith('http')) {
+            try {
+                const parsedUrl = new URL(strapImage);
+                const isAllowedOrigin =
+                    parsedUrl.hostname.endsWith('handdn.com') ||
+                    parsedUrl.hostname.endsWith('amazonaws.com') ||
+                    parsedUrl.hostname.endsWith('replicate.delivery');
+                if (!isAllowedOrigin) {
+                    return NextResponse.json({ error: 'Untrusted strap image origin' }, { status: 400 });
+                }
+            } catch {
+                return NextResponse.json({ error: 'Invalid strap image URL' }, { status: 400 });
+            }
             const res = await fetch(strapImage);
             if (!res.ok) throw new Error("Could not download the watch strap image from its URL");
             strapBuffer = Buffer.from(await res.arrayBuffer());
