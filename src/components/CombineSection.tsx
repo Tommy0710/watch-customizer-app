@@ -197,15 +197,15 @@ export default function CombineSection() {
         </span>
       </button>
 
-      {/* HD ZOOM LIGHTBOX MODAL WITH INTERACTIVE CONTROLS */}
+      {/* HD ZOOM LIGHTBOX MODAL WITH INTERACTIVE SCROLL & ZOOM CONTROLS */}
       {showZoomModal && resultImage && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-between p-4"
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-start overflow-hidden p-3 sm:p-4"
           onClick={() => setShowZoomModal(false)}
         >
-          {/* Top Bar with Controls */}
+          {/* Top Floating Bar with Controls */}
           <div 
-            className="w-full max-w-2xl flex items-center justify-between z-10 px-4 py-2 bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 shadow-lg text-white"
+            className="w-full max-w-2xl flex items-center justify-between z-20 px-4 py-2 bg-zinc-900/90 backdrop-blur-md rounded-full border border-white/10 shadow-2xl text-white mb-2 flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Zoom Controls: -, 100%, + */}
@@ -253,18 +253,21 @@ export default function CombineSection() {
             </div>
           </div>
 
-          {/* Interactive Zoomable Image Display */}
+          {/* Scrollable Viewport — allows scrolling smoothly from top buckle down to bottom tail tip when zoomed in! */}
           <div 
-            className="flex-1 w-full flex items-center justify-center overflow-auto p-4 my-2 cursor-zoom-out"
+            className="flex-1 w-full overflow-y-auto overflow-x-auto flex items-start justify-center p-2 sm:p-4 cursor-zoom-out"
           >
             <div 
-              className="transition-transform duration-200 ease-out flex items-center justify-center pointer-events-none"
-              style={{ transform: `scale(${zoomScale / 100})` }}
+              className="flex flex-col items-center justify-center m-auto transition-all duration-200 ease-out py-6"
+              style={{
+                height: `${zoomScale * 0.8}vh`,
+                minHeight: zoomScale <= 100 ? '0px' : `${zoomScale * 0.8}vh`,
+              }}
             >
               <img 
                 src={resultImage} 
                 alt="High-Res Result" 
-                className="max-h-[80vh] w-auto object-contain rounded shadow-2xl select-none pointer-events-auto"
+                className="h-full w-auto max-w-none object-contain rounded shadow-2xl select-none"
                 draggable={false}
               />
             </div>
