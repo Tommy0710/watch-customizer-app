@@ -27,17 +27,29 @@ import { describeError } from '../lib/reportError';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const STRAP_DIR = path.join(OUT_DIR, 'straps');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
-// The same product rule StrapSelector filters on. Rendering another category or special clasp
-// would pay for a product the customer can never select.
+export function buildCleanStrapPrompt(
+    material?: { family: string; surface: string },
+    productDetails?: { name?: string; attributes?: Array<{ name: string; options: string[] }> }
+): string {
+    let materialEmphasis = '';
+    if (material?.family === 'stingray') {
+        materialEmphasis = ' Material identity: genuine stingray leather with a continuous, uniform fine pebbled texture of tight round grains in its exact solid dye colour. Do not add white blotches, glitter, or diamond spots, and never render as flat leather or generic pebbled cowhide.';
+    }
 
-export function buildCleanStrapPrompt(material?: { family: string; surface: string }): string {
-    const materialEmphasis = material?.family === 'stingray'
-        ? ' Material identity: genuine stingray leather with a continuous, uniform fine pebbled texture of tight round grains in its exact solid dye colour. Do not add white blotches, glitter, or diamond spots, and never render as flat leather or generic pebbled cowhide.'
-        : '';
+    let colorStructureEmphasis = '';
+    const name = productDetails?.name || '';
+    const colorAttr = productDetails?.attributes?.find(a => /color/i.test(a.name))?.options.join(' ') || '';
+
+    if (/tricolor|tri-color|triple-color/i.test(name) || /Pearl White.*Yellow.*Black|Miami.*Yellow.*Black|Burgundy.*Navy.*Taupe|Grey.*Taupe.*Turquoise|Navy.*Olive.*Orange|Golden.*Navy.*Sesame|Grey.*Red.*White|Burgundy.*Navy.*Black|Orange.*Pearl White.*Taupe|Pearl White.*Purple.*Turquoise/i.test(colorAttr)) {
+        colorStructureEmphasis = ' IMPORTANT: This is a TRICOLOR 3-stripe watch strap — each strap piece has 3 distinct vertical color stripes: one outer edge is one color with stitching, the center section is a second contrasting color, and the opposite outer edge is a third color with stitching. You MUST reproduce all 3 distinct color stripes running cleanly down both strap pieces — do not merge them into a single solid colour.';
+    } else if (/duocolor|duo-color/i.test(name)) {
+        colorStructureEmphasis = ' IMPORTANT: This is a DUOCOLOR 2-color striped watch strap: each strap piece features distinct contrasting vertical color stripes and contrasting color keeper loops. Reproduce both distinct colors accurately — do not merge into a single solid colour.';
+    }
 
     return (
         'Reproduce the watch strap from this photo as a clean studio product image.' +
         materialEmphasis +
+        colorStructureEmphasis +
         ' Copy its leather colour, grain, pattern, stitching, edge finishing, buckle, and punched holes exactly, ' +
         'pixel-for-pixel, including any faint colour undertones such as green, blue, or purple patina ' +
         '— never substitute a generic brown or plain black leather. Completely remove the staging: the ' +
@@ -288,7 +300,7 @@ async function main() {
                 // Varied per attempt: the same seed reproduces the same duplicated render exactly,
                 // so retrying without changing it would just buy the identical failure again.
                 seed: 19826 + attempt - 1,
-                prompt: buildCleanStrapPrompt(combo.material),
+                prompt: buildCleanStrapPrompt(combo.material, { name: combo.productName, attributes: combo.attributes }),
                 resolution: '1 MP',
                 aspect_ratio: '9:16',
                 input_images: [
