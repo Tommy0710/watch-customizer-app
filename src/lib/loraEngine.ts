@@ -229,6 +229,7 @@ export async function generateWithLora(options: {
                     prompt_strength: LORA_PROMPT_STRENGTH,
                     lora_weights: weights,
                     lora_scale: DEFAULT_LORA_SCALE,
+                    aspect_ratio: '9:16',
                     megapixels: '1',
                     num_inference_steps: DEFAULT_LORA_STEPS,
                     output_format: 'webp',

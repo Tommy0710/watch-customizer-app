@@ -122,7 +122,7 @@ export default function CombineSection() {
                 onClick={() => setShowZoomModal(true)}
                 title="Click to zoom HD"
               >
-                <img src={resultImage} alt="Generated result" className="w-full h-full object-contain" />
+                <img src={resultImage} alt="Generated result" className="max-w-full max-h-full object-contain drop-shadow-sm" />
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm">
                   🔍 Click to Zoom HD
                 </div>
