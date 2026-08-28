@@ -17,6 +17,7 @@ export default function CombineSection() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showZoomModal, setShowZoomModal] = useState(false);
+  const [zoomScale, setZoomScale] = useState(100);
 
   useEffect(() => {
     if (!isGenerating) {
@@ -28,6 +29,13 @@ export default function CombineSection() {
     }, 1000);
     return () => clearInterval(intervalId);
   }, [isGenerating]);
+
+  // Reset zoom level to 100% when opening zoom modal
+  useEffect(() => {
+    if (showZoomModal) {
+      setZoomScale(100);
+    }
+  }, [showZoomModal]);
 
   const currentStepLabel = [...PROCESSING_STEPS]
     .reverse()
@@ -88,7 +96,20 @@ export default function CombineSection() {
     document.body.removeChild(a);
   };
 
-  const productUrl = selectedStrap?.link || (selectedStrap?.id ? `https://handdn.com/?p=${selectedStrap.id}` : null);
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomScale((prev) => Math.min(prev + 25, 300));
+  };
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomScale((prev) => Math.max(prev - 25, 50));
+  };
+
+  const handleZoomReset = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomScale(100);
+  };
 
   return (
     <>
@@ -97,7 +118,7 @@ export default function CombineSection() {
         <h2 className="text-sm tracking-widest text-gray-400 uppercase font-semibold mb-4 text-center flex-shrink-0">
           3. Generated Result
         </h2>
-        <div className="flex-1 w-full rounded-xl flex flex-col items-center justify-between text-gray-400 bg-white border border-gray-100 shadow-sm overflow-hidden p-3 relative min-h-0">
+        <div className="flex-1 w-full rounded-xl flex flex-col items-center justify-between text-gray-400 bg-white overflow-hidden p-3 relative min-h-0">
 
           {isGenerating ? (
             <div className="flex-1 w-full flex flex-col items-center justify-center gap-4">
@@ -117,29 +138,40 @@ export default function CombineSection() {
             </div>
           ) : resultImage ? (
             <div className="relative w-full h-full flex flex-col items-center justify-between min-h-0">
-              {/* Image Preview Container with comfortable padding */}
+              {/* Image Preview Container with borderless clean background */}
               <div 
-                className="flex-1 w-full min-h-0 flex items-center justify-center cursor-zoom-in group relative p-3 overflow-hidden"
+                className="flex-1 w-full min-h-0 flex items-center justify-center cursor-zoom-in group relative p-2 overflow-hidden"
                 onClick={() => setShowZoomModal(true)}
                 title="Nhấp để phóng to"
               >
                 <img 
                   src={resultImage} 
                   alt="Generated result" 
-                  className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-[1.02]" 
+                  className="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]" 
                 />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
-                  Phóng to
-                </div>
+                
+                {/* Magnifying Glass Floating Trigger */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowZoomModal(true); }}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center shadow-md backdrop-blur-sm transition-all cursor-pointer"
+                  title="Phóng to"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                </button>
               </div>
 
               {/* Action Buttons Bar */}
-              <div className="w-full flex items-center justify-center pt-2.5 border-t border-gray-100 flex-shrink-0 bg-white">
+              <div className="w-full flex items-center justify-center pt-2.5 flex-shrink-0 bg-white">
                 <button
                   onClick={handleDownload}
-                  className="px-5 py-2 bg-black hover:bg-zinc-800 text-white text-xs font-medium tracking-wide rounded-md transition-colors cursor-pointer shadow-xs"
+                  className="px-6 py-2 bg-black hover:bg-zinc-800 text-white text-xs font-semibold tracking-wide rounded-md transition-colors cursor-pointer shadow-sm"
                 >
-                  Tải xuống
+                  Download
                 </button>
               </div>
             </div>
@@ -167,31 +199,77 @@ export default function CombineSection() {
         </span>
       </button>
 
-      {/* HD ZOOM LIGHTBOX MODAL */}
+      {/* HD ZOOM LIGHTBOX MODAL WITH INTERACTIVE CONTROLS */}
       {showZoomModal && resultImage && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-between p-4"
           onClick={() => setShowZoomModal(false)}
         >
-          <div className="relative max-w-4xl max-h-[92vh] flex flex-col items-center">
-            <img 
-              src={resultImage} 
-              alt="High-Res Result" 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-            />
-            <div className="flex items-center gap-4 mt-3">
+          {/* Top Bar with Controls */}
+          <div 
+            className="w-full max-w-2xl flex items-center justify-between z-10 px-4 py-2 bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 shadow-lg text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Zoom Controls: -, 100%, + */}
+            <div className="flex items-center gap-1.5 bg-black/40 rounded-full px-2 py-1 border border-white/10">
+              <button
+                onClick={handleZoomOut}
+                disabled={zoomScale <= 50}
+                className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold cursor-pointer transition-colors"
+                title="Thu nhỏ (-)"
+              >
+                −
+              </button>
+              <button
+                onClick={handleZoomReset}
+                className="px-2.5 py-1 rounded text-xs font-mono font-medium hover:bg-zinc-800 text-gray-200 transition-colors cursor-pointer"
+                title="Khôi phục 100%"
+              >
+                {zoomScale}%
+              </button>
+              <button
+                onClick={handleZoomIn}
+                disabled={zoomScale >= 300}
+                className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold cursor-pointer transition-colors"
+                title="Phóng to (+)"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Actions: Download & Close */}
+            <div className="flex items-center gap-2">
               <button 
                 onClick={handleDownload}
-                className="px-4 py-2 bg-white text-black text-xs font-semibold rounded-full hover:bg-gray-200 cursor-pointer"
+                className="px-4 py-1.5 bg-white text-black text-xs font-semibold rounded-full hover:bg-gray-200 cursor-pointer shadow-sm transition-colors"
               >
-                Tải xuống
+                Download
               </button>
               <button 
                 onClick={() => setShowZoomModal(false)}
-                className="px-4 py-2 bg-zinc-800 text-white text-xs font-semibold rounded-full hover:bg-zinc-700 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
+                title="Đóng (Esc)"
               >
-                Đóng
+                ✕
               </button>
+            </div>
+          </div>
+
+          {/* Interactive Zoomable Image Display */}
+          <div 
+            className="flex-1 w-full flex items-center justify-center overflow-auto p-4 my-2 cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div 
+              className="transition-transform duration-200 ease-out flex items-center justify-center"
+              style={{ transform: `scale(${zoomScale / 100})` }}
+            >
+              <img 
+                src={resultImage} 
+                alt="High-Res Result" 
+                className="max-h-[80vh] w-auto object-contain rounded shadow-2xl select-none"
+                draggable={false}
+              />
             </div>
           </div>
         </div>
