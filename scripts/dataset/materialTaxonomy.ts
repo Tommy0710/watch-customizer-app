@@ -23,6 +23,8 @@ export type MaterialFamily =
     | 'nubuck'
     | 'saffiano'
     | 'epi'
+    | 'epsom'
+    | 'togo'
     | 'vachetta'
     | 'pueblo'
     | 'habana'
@@ -78,6 +80,8 @@ const RULES: Rule[] = [
     { family: 'alcantara', pattern: /alcantara/i, surface: 'suede-nap' },
     { family: 'saffiano', pattern: /saffiano/i, surface: 'embossed' },
     { family: 'epi', pattern: /\bepi\b/i, surface: 'embossed' },
+    { family: 'epsom', pattern: /epsom/i, surface: 'embossed' },
+    { family: 'togo', pattern: /togo/i, surface: 'pebbled' },
     { family: 'suede', pattern: /suede/i, surface: 'suede-nap' },
     { family: 'nubuck', pattern: /nubuck/i, surface: 'suede-nap' },
     { family: 'vachetta', pattern: /vachetta/i, surface: 'patina' },

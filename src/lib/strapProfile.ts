@@ -184,7 +184,7 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
 
     if (!profile.padded && !profile.habanaBuckleSidePadding) {
         sentences.push(
-            "This strap has a completely flat, unpadded cross-section with uniform thickness from edge to edge — no raised central ridge, no dome, no cushioning, and no puffy padding; render it completely flat across its full width.",
+            "This strap has a completely flat, zero-cushion cross-section with uniform thickness from edge to edge — no raised central ridge, no dome, no cushioning, no convex bulge, and no puffy 3D pillow effect; render it completely flat and planar across its full width.",
         );
     } else if (profile.habanaBuckleSidePadding) {
         const ridgeDescription = profile.doublePadded

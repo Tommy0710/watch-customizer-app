@@ -164,16 +164,6 @@ export default function CombineSection() {
                   </svg>
                 </button>
               </div>
-
-              {/* Action Buttons Bar */}
-              <div className="w-full flex items-center justify-center pt-2.5 flex-shrink-0 bg-white">
-                <button
-                  onClick={handleDownload}
-                  className="px-6 py-2 bg-black hover:bg-zinc-800 text-white text-xs font-semibold tracking-wide rounded-md transition-colors cursor-pointer shadow-sm"
-                >
-                  Download
-                </button>
-              </div>
             </div>
           ) : (
             <div className="flex-1 w-full flex items-center justify-center">

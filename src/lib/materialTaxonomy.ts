@@ -24,6 +24,7 @@ const RULES: Array<[string, RegExp, string]> = [
   ['peccary', /peccary/i, 'pebbled'], ['shark', /shark/i, 'pebbled'],
   ['canvas', /canvas/i, 'woven'], ['alcantara', /alcantara/i, 'suede-nap'],
   ['saffiano', /saffiano/i, 'embossed'], ['epi', /\bepi\b/i, 'embossed'],
+  ['epsom', /epsom/i, 'embossed'], ['togo', /togo/i, 'pebbled'],
   ['suede', /suede/i, 'suede-nap'], ['nubuck', /nubuck/i, 'suede-nap'],
   ['vachetta', /vachetta/i, 'patina'], ['pueblo', /pueblo|badalassi\s+carlo/i, 'patina'],
   ['habana', /habana/i, 'patina'], ['babele', /babele/i, 'smooth'],
@@ -66,6 +67,10 @@ export function buildMaterialClause(profile: MaterialProfile): string {
       return ' Material identity: authentic Badalassi Carlo Pueblo leather with its signature hand-scratched matte rustic surface texture and micro circular scuffs; preserve this distinctive distressed velvet-matte character.';
     case 'saffiano':
       return ' Material identity: authentic Saffiano leather featuring its iconic machine-embossed diagonal cross-hatch micro-grain texture; preserve this crisp geometric cross-hatch pattern and rigid structure.';
+    case 'epsom':
+      return ' Material identity: authentic Epsom embossed calfskin leather with its signature fine, rigid geometric pressed grain and subtle matte luster; preserve this distinct Epsom grain structure.';
+    case 'togo':
+      return ' Material identity: authentic Togo leather featuring soft natural round pebble grain and rich supple character; preserve this distinct pebbled grain.';
     case 'epi':
       return ' Material identity: authentic Epi leather with its distinctive horizontal undulating wave-ridge embossed grain pattern; preserve this bold textured wave pattern and do not smooth it out.';
     case 'shell-cordovan':
