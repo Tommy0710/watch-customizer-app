@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 
 // Rotating status text shown while /api/generate is running
@@ -18,6 +18,7 @@ export default function CombineSection() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showZoomModal, setShowZoomModal] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
+  const zoomImageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isGenerating) {
@@ -43,6 +44,22 @@ export default function CombineSection() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showZoomModal]);
+
+  // Handle mouse wheel zoom in/out when cursor is over the image
+  useEffect(() => {
+    const el = zoomImageRef.current;
+    if (!el || !showZoomModal) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY < 0 ? 15 : -15;
+      setZoomScale((prev) => Math.min(Math.max(prev + delta, 50), 300));
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
   }, [showZoomModal]);
 
   const currentStepLabel = [...PROCESSING_STEPS]
@@ -258,7 +275,9 @@ export default function CombineSection() {
             className="flex-1 w-full overflow-y-auto overflow-x-auto flex items-start justify-center p-2 sm:p-4 cursor-zoom-out"
           >
             <div 
-              className="flex flex-col items-center justify-center m-auto transition-all duration-200 ease-out py-6"
+              ref={zoomImageRef}
+              className="flex flex-col items-center justify-center m-auto transition-all duration-200 ease-out py-6 cursor-default"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 height: `${zoomScale * 0.8}vh`,
                 minHeight: zoomScale <= 100 ? '0px' : `${zoomScale * 0.8}vh`,
