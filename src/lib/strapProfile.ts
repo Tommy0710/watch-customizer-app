@@ -197,16 +197,16 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
         const ridgeDescription = profile.doublePadded
             ? 'two parallel raised padded ridges running side by side down its length'
             : profile.paddedStyle === 'domed'
-            ? 'a smooth rounded domed cushion profile arching gently across the center'
+            ? 'a distinct thick raised 3D domed padded cushion arching prominently across the center'
             : 'raised, defined square-padded ridges with bevelled edges';
         sentences.push(
-            `This strap has a padded construction: preserve its ${ridgeDescription} rather than flattening them.`,
+            `This strap has a distinct 3D padded construction: render a clearly visible, thick raised ${ridgeDescription} with prominent 3D relief and realistic depth shading extending along the strap — do not flatten it into a thin 2D sheet.`,
         );
     }
 
     if (profile.curvedEnd) {
         sentences.push(
-            "This strap has curved ends that contour flush against the round watch case: preserve the curved strap ends where they meet the case rather than rendering straight square ends.",
+            "This strap has integrated CURVED ENDS: the top ends of the strap pieces are crescent-curved to wrap tightly and contour seamlessly flush against the round circular curvature of the watch bezel with zero gap between the strap and case, rather than having straight square gap ends.",
         );
     }
 
