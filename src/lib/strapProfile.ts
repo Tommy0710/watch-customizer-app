@@ -197,10 +197,10 @@ export function buildStrapProfileClause(profile: StrapProfile): string {
         const ridgeDescription = profile.doublePadded
             ? 'two parallel raised padded ridges running side by side down its length'
             : profile.paddedStyle === 'domed'
-            ? 'a distinct thick raised 3D domed padded cushion arching prominently across the center'
+            ? 'a smooth, seamless rounded domed padded cushion profile arching gently and swelling with soft convex 3D depth across the center (seamless, natural, with no hard stepped rails or double borders)'
             : 'raised, defined square-padded ridges with bevelled edges';
         sentences.push(
-            `This strap has a distinct 3D padded construction: render a clearly visible, thick raised ${ridgeDescription} with prominent 3D relief and realistic depth shading extending along the strap — do not flatten it into a thin 2D sheet.`,
+            `This strap has a distinct 3D padded construction: render a clearly visible, thick raised ${ridgeDescription} with realistic depth shading and soft lighting extending along the strap.`,
         );
     }
 
