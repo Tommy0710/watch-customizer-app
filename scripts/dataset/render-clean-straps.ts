@@ -27,23 +27,72 @@ import { describeError } from '../lib/reportError';
 const OUT_DIR = path.join(process.cwd(), 'scripts/dataset/out');
 const STRAP_DIR = path.join(OUT_DIR, 'straps');
 const CLEAN_DIR = path.join(OUT_DIR, 'straps-clean');
+import { classifyStrap } from '../../src/lib/strapProfile';
+
 export function buildCleanStrapPrompt(
     material?: { family: string; surface: string },
     productDetails?: { name?: string; attributes?: Array<{ name: string; options: string[] }> }
 ): string {
+    const name = productDetails?.name || '';
+    const categories = name ? [name] : [];
+    const attributes = productDetails?.attributes || [];
+    const profile = classifyStrap(name, categories, attributes);
+
     let materialEmphasis = '';
     if (material?.family === 'stingray') {
         materialEmphasis = ' Material identity: genuine stingray leather with a continuous, uniform fine pebbled texture of tight round grains in its exact solid dye colour. Do not add white blotches, glitter, or diamond spots, and never render as flat leather or generic pebbled cowhide.';
+    } else if (material?.family === 'hornback-alligator') {
+        materialEmphasis = ' Material identity: genuine hornback alligator leather with distinct 3D raised spinal scutes/horns down both strap pieces in uniform texture and colour.';
+    } else if (material?.family === 'alligator') {
+        materialEmphasis = ' Material identity: genuine alligator/crocodile leather with authentic square/round tile scales and natural creased grout lines.';
+    } else if (material?.family === 'sailcloth') {
+        materialEmphasis = ' Material identity: authentic embossed crosshatch woven Sailcloth with uniform fine micro-grain from edge to edge (entire surface is one continuous material texture).';
+    } else if (material?.family === 'epsom') {
+        materialEmphasis = ' Material identity: authentic Epsom leather with its iconic pressed cross-hatch micro-grain.';
+    } else if (material?.family === 'saffiano') {
+        materialEmphasis = ' Material identity: authentic Saffiano leather with its iconic cross-hatch textured grain.';
+    } else if (material?.family === 'pueblo') {
+        materialEmphasis = ' Material identity: genuine Italian Pueblo leather with its unique velvety matte scuffed vintage surface.';
+    } else if (material?.family === 'shell-cordovan') {
+        materialEmphasis = ' Material identity: authentic Shell Cordovan equine leather with its rich glossy depth and glassy luster.';
+    } else if (material?.family === 'vachetta') {
+        materialEmphasis = ' Material identity: authentic smooth full-grain Vachetta leather.';
     }
 
     let colorStructureEmphasis = '';
-    const name = productDetails?.name || '';
-    const colorAttr = productDetails?.attributes?.find(a => /color/i.test(a.name))?.options.join(' ') || '';
+    const colorAttr = attributes.find(a => /color/i.test(a.name))?.options.join(' ') || '';
 
     if (/tricolor|tri-color|triple-color/i.test(name) || /Pearl White.*Yellow.*Black|Miami.*Yellow.*Black|Burgundy.*Navy.*Taupe|Grey.*Taupe.*Turquoise|Navy.*Olive.*Orange|Golden.*Navy.*Sesame|Grey.*Red.*White|Burgundy.*Navy.*Black|Orange.*Pearl White.*Taupe|Pearl White.*Purple.*Turquoise/i.test(colorAttr)) {
         colorStructureEmphasis = ' IMPORTANT: This is a TRICOLOR 3-stripe watch strap — each strap piece has 3 distinct vertical color stripes: one outer edge is one color with stitching, the center section is a second contrasting color, and the opposite outer edge is a third color with stitching. You MUST reproduce all 3 distinct color stripes running cleanly down both strap pieces — do not merge them into a single solid colour.';
     } else if (/duocolor|duo-color/i.test(name)) {
         colorStructureEmphasis = ' IMPORTANT: This is a DUOCOLOR 2-color striped watch strap: each strap piece features distinct contrasting vertical color stripes and contrasting color keeper loops. Reproduce both distinct colors accurately — do not merge into a single solid colour.';
+    } else if (/patina/i.test(name) || material?.surface === 'patina') {
+        colorStructureEmphasis = ' IMPORTANT: Hand-dyed PATINA SUNBURST / VIGNETTE finish — luminous, radiant center blending smoothly into rich, deeper ombre-shaded edges.';
+    }
+
+    let attributeEmphasis = '';
+    if (profile.stitch === 'none') {
+        attributeEmphasis += ' STITCHING: ABSOLUTELY NO STITCHING — clean, smooth raw or burnished edges with zero stitches and zero thread anywhere.';
+    } else if (profile.stitch === 'side-stitch') {
+        attributeEmphasis += ' STITCHING: SIDE-STITCH ONLY — only horizontal bar stitches near the top spring bars, with zero perimeter stitching running down the sides.';
+    } else if (profile.stitch === 'double') {
+        attributeEmphasis += ' STITCHING: DOUBLE-STITCH — two parallel rows of stitching running along the margins.';
+    }
+
+    if (profile.curvedEnd) {
+        attributeEmphasis += ' CURVED ENDS: The top ends of the strap pieces are crescent-curved concave arcs to wrap seamlessly flush against a round watch bezel.';
+    }
+
+    if (profile.padded) {
+        if (profile.doublePadded) {
+            attributeEmphasis += ' 3D PADDING: DOUBLE PADDED with two distinct parallel raised padded ridges running down its length.';
+        } else if (profile.paddedStyle === 'domed') {
+            attributeEmphasis += ' 3D PADDING: Authentic 3D DOMED PADDING — the material arches smoothly upward into a continuous, thick convex 3D dome between the stitch lines with soft natural lighting and realistic depth shading (thickest near the top spring bar ends). The entire surface is one uniform continuous material texture (do NOT add any separate rubber strips or inserts).';
+        } else {
+            attributeEmphasis += ' 3D PADDING: Defined 3D square-padded ridge with clean bevelled side steps and drop shadows.';
+        }
+    } else {
+        attributeEmphasis += ' FLAT PROFILE: Completely flat profile with uniform planar thickness across its entire width — do not add any dome, ridge, or padding.';
     }
 
     return (
@@ -321,7 +370,7 @@ async function main() {
             if (!res.ok) throw new Error(`Could not download clean strap (${res.status})`);
             const candidate = Buffer.from(await res.arrayBuffer());
 
-            const isMultiColorOrPatina = /tricolor|tri-color|duocolor|duo-color|triple|patina/i.test(combo.productName);
+            const isMultiColorOrPatina = /tricolor|tri-color|duocolor|duo-color|triple|patina|himalayan|mix/i.test(combo.productName);
             const colourVerdict = isMultiColorOrPatina
                 ? undefined
                 : compareStrapColour(sourceColour, await measureStrapColour(candidate));

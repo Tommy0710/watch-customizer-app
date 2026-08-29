@@ -80,7 +80,7 @@ async function main() {
 
         const render = await readFile(path.join(CLEAN_DIR, file));
         const name = byProduct.get(productId)?.productName || '';
-        const isMultiColor = /tricolor|tri-color|duocolor|duo-color|triple|patina/i.test(name);
+        const isMultiColor = /tricolor|tri-color|duocolor|duo-color|triple|patina|himalayan|mix/i.test(name);
         let colour;
         if (catalogUrl && !isMultiColor) {
             const source = await loadColourSource(productId, catalogUrl);
