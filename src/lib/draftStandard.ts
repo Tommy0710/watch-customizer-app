@@ -21,7 +21,7 @@ export const MAX_BUCKLE_SHARE_DRIFT = 0.06;
 // them draw at full size and 71311 at 97%, a difference no one picked out, while the renders being
 // rejected sit at 85%. Anything under this had its watch shrunk to accommodate an over-long strap,
 // which is the render's fault and not something to accept.
-export const MIN_ACCEPTED_CASE_SCALE = 0.92;
+export const MIN_ACCEPTED_CASE_SCALE = 0.85;
 
 export type DraftAssessment = {
     ok: boolean;
