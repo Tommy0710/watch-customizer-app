@@ -321,8 +321,8 @@ async function main() {
             if (!res.ok) throw new Error(`Could not download clean strap (${res.status})`);
             const candidate = Buffer.from(await res.arrayBuffer());
 
-            const isMultiColor = /tricolor|tri-color|duocolor|duo-color|triple/i.test(combo.productName);
-            const colourVerdict = isMultiColor
+            const isMultiColorOrPatina = /tricolor|tri-color|duocolor|duo-color|triple|patina/i.test(combo.productName);
+            const colourVerdict = isMultiColorOrPatina
                 ? undefined
                 : compareStrapColour(sourceColour, await measureStrapColour(candidate));
 
