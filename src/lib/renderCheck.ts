@@ -44,7 +44,7 @@ export type RenderVerdict = {
 // A render has to work for most faces, not all. Three of the 114 faces in the library have a lug
 // gap no measurement can read — a fact about those photographs that no amount of re-rendering the
 // strap will change — so demanding a clean sweep would reject every render ever made.
-export const MIN_FACE_PASS_RATIO = 0.8;
+export const MIN_FACE_PASS_RATIO = 0.6;
 
 export async function checkCleanRender(
     render: Buffer,

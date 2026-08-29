@@ -140,20 +140,23 @@ async function loadColourSource(productId: number, catalogUrl: string): Promise<
     return Buffer.from(await (await fetch(catalogUrl)).arrayBuffer());
 }
 
-async function runWithRetry(input: Record<string, unknown>, attempts = 3): Promise<unknown> {
+async function runWithRetry(input: Record<string, unknown>, attempts = 5): Promise<unknown> {
     for (let attempt = 1; ; attempt++) {
         try {
             return await replicate.run('black-forest-labs/flux-2-pro', { input });
         } catch (err: unknown) {
             const message = String((err as { message?: string })?.message ?? err);
             const status = (err as { response?: { status?: number } })?.response?.status;
+            const isRateLimit = status === 429 || message.includes('429') || message.toLowerCase().includes('throttled');
             const retryable =
+                isRateLimit ||
                 message.includes('E005') ||
                 message.toLowerCase().includes('flagged as sensitive') ||
                 (typeof status === 'number' && status >= 500);
             if (!retryable || attempt >= attempts) throw err;
-            console.warn(`    ⚠️ attempt ${attempt} failed (${message.slice(0, 60)}) — retrying`);
-            await new Promise((r) => setTimeout(r, 2000 * attempt));
+            const waitMs = isRateLimit ? 7000 * attempt : 2000 * attempt;
+            console.warn(`    ⚠️ attempt ${attempt} hit ${isRateLimit ? '429 rate limit' : 'error'} (${message.slice(0, 60)}) — waiting ${waitMs/1000}s and retrying`);
+            await new Promise((r) => setTimeout(r, waitMs));
         }
     }
 }
@@ -318,10 +321,15 @@ async function main() {
             if (!res.ok) throw new Error(`Could not download clean strap (${res.status})`);
             const candidate = Buffer.from(await res.arrayBuffer());
 
+            const isMultiColor = /tricolor|tri-color|duocolor|duo-color|triple/i.test(combo.productName);
+            const colourVerdict = isMultiColor
+                ? undefined
+                : compareStrapColour(sourceColour, await measureStrapColour(candidate));
+
             const verdict = await checkCleanRender(
                 candidate,
                 faces,
-                compareStrapColour(sourceColour, await measureStrapColour(candidate)),
+                colourVerdict,
             );
 
             if (verdict.ok) {

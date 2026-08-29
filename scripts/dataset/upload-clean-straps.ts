@@ -79,11 +79,13 @@ async function main() {
         const catalogUrl = byProduct.get(productId)?.strapImage ?? catalogImageById.get(productId);
 
         const render = await readFile(path.join(CLEAN_DIR, file));
+        const name = byProduct.get(productId)?.productName || '';
+        const isMultiColor = /tricolor|tri-color|duocolor|duo-color|triple/i.test(name);
         let colour;
-        if (catalogUrl) {
+        if (catalogUrl && !isMultiColor) {
             const source = await loadColourSource(productId, catalogUrl);
             colour = compareStrapColour(await measureStrapColour(source), await measureStrapColour(render));
-        } else {
+        } else if (!catalogUrl) {
             noCatalogMatch++;
         }
 
