@@ -14,7 +14,7 @@
 // A real strap's buckle side is about 38% of its total length. The accepted five measure 37% to
 // 40%; renders that normalised the two halves to equal length sit at 48% to 50%.
 export const TARGET_BUCKLE_SHARE = 0.38;
-export const MAX_BUCKLE_SHARE_DRIFT = 0.06;
+export const MAX_BUCKLE_SHARE_DRIFT = 0.08;
 
 // The watch head is meant to be one fixed size across every draft, so the model never has to guess
 // how big a watch is. The floor is set from the accepted five rather than from the ideal: four of
