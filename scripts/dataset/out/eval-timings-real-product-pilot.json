@@ -1,0 +1,17 @@
+{
+  "label": "real-product-pilot",
+  "strength": 0.35,
+  "model": "black-forest-labs/flux-dev-lora",
+  "trainingFile": "training.json",
+  "trainingVersion": "tommy0710/watch-lora-v2:2ba584ef43b457be771182064dc447332737541419ccad956dcedc35dbac623b",
+  "rows": [
+    {
+      "id": "024-vintage-light-grey-lizard-leather-watch-strap-straps-a-lange-sohne-little-la",
+      "productName": "Vintage Light Grey Lizard Leather Watch Strap",
+      "seconds": 25.26,
+      "hasBaseline": false
+    }
+  ],
+  "meanSeconds": 25.26,
+  "spend": "[eval-style:real-product-pilot] spent $0.04 of $0.04"
+}

@@ -1,0 +1,214 @@
+<!doctype html>
+<meta charset="utf-8"><title>LoRA vs PRO — strength 0.35</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0}
+ .row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:20px;border-bottom:1px solid #333}
+ img{width:100%;background:#fff;display:block;border-radius:3px}
+ h3{margin:0 0 6px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+ .meta{grid-column:1/-1;font-size:13px;color:#888}
+ .none{color:#666;font-size:13px}
+ header{position:sticky;top:0;background:#000;padding:14px 20px;border-bottom:1px solid #333;z-index:2}
+</style>
+<header>
+  <b>Held-out comparison</b> — prompt_strength 0.35, mean LoRA latency 5.4s over 33 runs.<br>
+  <span style="font-size:12px;color:#888">Pass: no catastrophic failure · LoRA at least matches PRO on assembly · strap colour and grain preserved · mean latency &lt;15s</span>
+</header>
+
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/024-vintage-woody-brown-nubuck-leather-side-stitch-watch-strap-straps-a-lange-so_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 11.0s</h3><img src="eval/watch-lora-v2-1afa0e75-035/024-vintage-woody-brown-nubuck-leather-side-stitch-watch-strap-straps-a-lange-so_lora.webp"></div>
+    <div class="meta">Vintage Woody Brown Nubuck Leather Side-Stitch Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/025-orange-ostrich-leather-watch-strap-straps-a-lange-sohne-lange-1-101-021_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Orange Ostrich leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/026-turquoise-epsom-leather-watch-strap-straps-a-lange-sohne-richard-lange-pour-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Turquoise Epsom Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/027-vintage-sesame-epsom-leather-slim-watch-strap-straps-a-lange-sohne-saxonia-2_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Vintage Sesame Epsom Leather Slim Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/028-vintage-black-togo-leather-side-stitch-watch-strap-straps-a-lange-sohne-litt_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.6s</h3><img src="eval/watch-lora-v2-1afa0e75-035/028-vintage-black-togo-leather-side-stitch-watch-strap-straps-a-lange-sohne-litt_lora.webp"></div>
+    <div class="meta">Vintage Black Togo Leather Side-Stitch Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/029-light-olive-peccary-leather-watch-strap-straps-a-lange-sohne-1815-chronograp_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Light Olive Peccary Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/030-padded-golden-peccary-leather-watch-strap-straps-a-lange-sohne-datograph-up-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.6s</h3><img src="eval/watch-lora-v2-1afa0e75-035/030-padded-golden-peccary-leather-watch-strap-straps-a-lange-sohne-datograph-up-_lora.webp"></div>
+    <div class="meta">Padded Golden Peccary Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/031-micro-stitch-cognac-peccary-leather-watch-strap-straps-a-lange-sohne-grand-l_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.6s</h3><img src="eval/watch-lora-v2-1afa0e75-035/031-micro-stitch-cognac-peccary-leather-watch-strap-straps-a-lange-sohne-grand-l_lora.webp"></div>
+    <div class="meta">Micro Stitch Cognac Peccary Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/032-vintage-light-olive-peccary-leather-watch-strap-straps-a-lange-sohne-lange-1_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Vintage Light Olive Peccary Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/033-navy-pueblo-badalassi-carlo-leather-watch-strap-straps-a-lange-sohne-grand-l_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Navy Pueblo Badalassi Carlo Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/034-40-s-vintage-dark-olive-pueblo-leather-watch-strap-straps-a-lange-sohne-moon_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.9s</h3><img src="eval/watch-lora-v2-1afa0e75-035/034-40-s-vintage-dark-olive-pueblo-leather-watch-strap-straps-a-lange-sohne-moon_lora.webp"></div>
+    <div class="meta">40's Vintage Dark Olive Pueblo Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/035-vintage-navy-pueblo-badalassi-carlo-leather-watch-strap-straps-a-lange-sohne_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Vintage Navy Pueblo Badalassi Carlo Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/037-navy-saffiano-leather-watch-strap-straps-a-lange-sohne-lange-1-stealth-plati_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.7s</h3><img src="eval/watch-lora-v2-1afa0e75-035/037-navy-saffiano-leather-watch-strap-straps-a-lange-sohne-lange-1-stealth-plati_lora.webp"></div>
+    <div class="meta">Navy Saffiano Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/038-vintage-black-saffiano-leather-side-stitch-watch-strap-straps-a-lange-sohne-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Vintage Black Saffiano Leather Side-Stitch Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/039-curved-end-blue-sailcloth-rubber-lining-black-rubber-watch-strap-straps-a-la_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Curved End Blue Sailcloth Rubber Lining Black Rubber Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/040-red-sailcloth-rubber-lining-red-swift-watch-strap-straps-a-lange-sohne-saxon_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Red Sailcloth Rubber Lining Red Swift Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/041-orange-sailcloth-rubber-watch-strap-straps-a-lange-sohne-zeitwerk-lumen-142-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Orange Sailcloth Rubber Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/042-curved-end-padded-miami-blue-sailcloth-rubber-lining-navy-alran-sully-watch-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Curved End Padded Miami Blue Sailcloth Rubber Lining Navy Alran Sully Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/043-curved-end-padded-white-sailcloth-rubber-lining-moss-alran-sully-watch-strap_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Curved End Padded White Sailcloth Rubber Lining Moss Alran Sully Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/044-padded-aqua-green-sailcloth-rubber-lining-brick-rubber-watch-strap-straps-a-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Padded Aqua Green Sailcloth Rubber Lining Brick Rubber Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/045-padded-purple-sailcloth-rubber-watch-strap-straps-a-lange-sohne-lange-1-daym_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Padded Purple Sailcloth Rubber Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/046-jean-blue-shark-leather-watch-strap-straps-a-lange-sohne-saxonia-automatic-3_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Jean Blue Shark Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/047-green-shell-cordovan-leather-watch-strap-straps-a-lange-sohne-zeitwerk-date-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Green Shell Cordovan Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/048-padded-dark-blue-shell-cordovan-lining-olive-epsom-leather-watch-strap-strap_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Padded Dark Blue Shell Cordovan Lining Olive Epsom Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/049-dark-brown-smooth-calf-leather-watch-strap-straps-a-lange-sohne-1815-annual-_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 5.7s</h3><img src="eval/watch-lora-v2-1afa0e75-035/049-dark-brown-smooth-calf-leather-watch-strap-straps-a-lange-sohne-1815-annual-_lora.webp"></div>
+    <div class="meta">Dark Brown Smooth Calf Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/050-vintage-turquoise-stingray-leather-watch-strap-straps-a-lange-sohne-datograp_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Vintage Turquoise Stingray Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/051-beige-suede-leather-watch-strap-straps-a-lange-sohne-1815-235-026_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Beige Suede Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/052-vintage-purple-suede-leather-watch-strap-straps-a-lange-sohne-lange-1-moon-p_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.7s</h3><img src="eval/watch-lora-v2-1afa0e75-035/052-vintage-purple-suede-leather-watch-strap-straps-a-lange-sohne-lange-1-moon-p_lora.webp"></div>
+    <div class="meta">Vintage Purple Suede Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/053-white-swift-leather-watch-strap-straps-a-lange-sohne-1815-rattrapante-425-02_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">White Swift Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/054-vintage-olive-swift-leather-watch-strap-straps-a-lange-sohne-zeitwerk-140-03_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.4s</h3><img src="eval/watch-lora-v2-1afa0e75-035/054-vintage-olive-swift-leather-watch-strap-straps-a-lange-sohne-zeitwerk-140-03_lora.webp"></div>
+    <div class="meta">Vintage Olive Swift Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/055-navy-vachetta-leather-watch-strap-straps-a-lange-sohne-grand-lange-1-moon-ph_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Navy Vachetta Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/056-patina-brown-slash-vachetta-leather-watch-strap-straps-a-lange-sohne-saxonia_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — ERROR</h3><p class="none">missing clean render</p></div>
+    <div class="meta">Patina Brown Slash Vachetta Leather Watch Strap</div>
+  </section>
+  <section class="row">
+    <div><h3>draft — input</h3><img src="eval/watch-lora-v2-1afa0e75-035/057-vintage-golden-vachetta-leather-side-stitch-strap-straps-a-lange-sohne-saxon_draft.png"></div>
+    <div><h3>PRO — baseline</h3><p class="none">no baseline generated for this combo</p></div>
+    <div><h3>LoRA — 4.7s</h3><img src="eval/watch-lora-v2-1afa0e75-035/057-vintage-golden-vachetta-leather-side-stitch-strap-straps-a-lange-sohne-saxon_lora.webp"></div>
+    <div class="meta">Vintage Golden Vachetta Leather Side-Stitch Strap</div>
+  </section>

@@ -1,0 +1,92 @@
+[
+  {
+    "productId": 9619,
+    "productName": "Dark Aqua Blue Alcantara Watch Strap",
+    "faceKey": "alpina/sfw/straps-alpina-big-date-al-372gr4fbs26.png",
+    "seen": false,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 19.626485947395253,
+    "saturationGain": 0.8706948214481324,
+    "seconds": 10.031
+  },
+  {
+    "productId": 10519,
+    "productName": "Navy Saffiano Leather Watch Strap",
+    "faceKey": "a-lange-sohne/sfw/straps-a-lange-sohne-lange-1-stealth-platinum-101-025.png",
+    "seen": false,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 2.2657214432719,
+    "saturationGain": 1.1697385819981896,
+    "seconds": 23.045
+  },
+  {
+    "productId": 11684,
+    "productName": "Dark Brown Smooth Calf Leather Watch Strap",
+    "faceKey": "a-lange-sohne/sfw/straps-a-lange-sohne-1815-annual-calendar-238-026.png",
+    "seen": false,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 2.723585446510377,
+    "saturationGain": 0.8796999842375001,
+    "seconds": 4.686
+  },
+  {
+    "productId": 13548,
+    "productName": "Burgundy Shell Cordovan Leather Watch Strap",
+    "faceKey": "albishorn/sfw/straps-albishorn-type-10-sihlwald-type-10-sihlwald.png",
+    "seen": false,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 2.4450161552722514,
+    "saturationGain": 1.0103614424049077,
+    "seconds": 4.415
+  },
+  {
+    "productId": 15478,
+    "productName": "Vintage Blue Stingray Leather Watch Strap",
+    "faceKey": "akrivia/rs-and-custom/straps-akrivia-ak-06-akrivia-grey-ak-06-akrivia-grey.png",
+    "seen": false,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 0.9553220268891778,
+    "saturationGain": 1.0769307983863017,
+    "seconds": 4.751
+  },
+  {
+    "productId": 25454,
+    "productName": "Vintage Box Calf Black Leather Watch Strap",
+    "faceKey": "a-lange-sohne/sfw/straps-a-lange-sohne-lange-1-moon-phase-192-032.png",
+    "seen": false,
+    "status": "generated",
+    "ok": false,
+    "hueDelta": 111.71224035432215,
+    "saturationGain": 0.7751086166776755,
+    "reason": "hue shifted 112°",
+    "seconds": 4.772
+  },
+  {
+    "productId": 17004,
+    "productName": "Black Double Hornback Alligator Watch Strap",
+    "faceKey": "a-lange-sohne/sfw/straps-a-lange-sohne-richard-lange-jumping-seconds-252-029.png",
+    "seen": true,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 0,
+    "saturationGain": 0.7728783276381223,
+    "reason": "too little saturated colour to compare hue",
+    "seconds": 4.546
+  },
+  {
+    "productId": 20776,
+    "productName": "Light Pink Canvas Folded Edge Epsom Watch Strap",
+    "faceKey": "alpina/sfw/straps-alpina-big-date-al-372gr4fbs26.png",
+    "seen": true,
+    "status": "generated",
+    "ok": true,
+    "hueDelta": 1.7505076679380247,
+    "saturationGain": 1.0144680698258595,
+    "seconds": 4.614
+  }
+]

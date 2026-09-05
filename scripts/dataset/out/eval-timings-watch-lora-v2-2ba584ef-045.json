@@ -1,0 +1,47 @@
+{
+  "label": "watch-lora-v2-2ba584ef-045",
+  "strength": 0.45,
+  "model": "black-forest-labs/flux-dev-lora",
+  "trainingFile": "training.json",
+  "trainingVersion": "tommy0710/watch-lora-v2:2ba584ef43b457be771182064dc447332737541419ccad956dcedc35dbac623b",
+  "rows": [
+    {
+      "id": "024-curved-end-navy-pueblo-leather-watch-strap-straps-albishorn-type-10-sihlwald",
+      "productName": "Curved End Navy Pueblo Leather Watch Strap",
+      "seconds": 18.898,
+      "hasBaseline": false
+    },
+    {
+      "id": "025-white-stitching-navy-babele-leather-watch-strap-straps-albishorn-type-10-cla",
+      "productName": "White Stitching Navy Babele Leather Watch Strap",
+      "seconds": 12.256,
+      "hasBaseline": false
+    },
+    {
+      "id": "026-duocolor-forest-suede-red-alran-sully-leather-watch-strap-straps-albishorn-1",
+      "productName": "Duocolor Forest Suede Red Alran Sully Leather Watch Strap",
+      "seconds": 20.181,
+      "hasBaseline": false
+    },
+    {
+      "id": "027-green-python-leather-watch-strap-straps-albishorn-1952-thundergraph-himalaya",
+      "productName": "Green Python Leather Watch Strap",
+      "seconds": 50.807,
+      "hasBaseline": false
+    },
+    {
+      "id": "028-dark-brown-vachetta-leather-watch-strap-straps-albishorn-type-10-sihlwald-ty",
+      "productName": "Dark Brown Vachetta Leather Watch Strap",
+      "seconds": 6.458,
+      "hasBaseline": false
+    },
+    {
+      "id": "029-curved-end-stone-grey-alligator-lining-mid-night-blue-alligator-leather-watc",
+      "productName": "Curved End Stone Grey Alligator Lining Mid Night Blue Alligator Leather Watch Strap",
+      "seconds": 5.16,
+      "hasBaseline": false
+    }
+  ],
+  "meanSeconds": 18.959999999999997,
+  "spend": "[eval-style:watch-lora-v2-2ba584ef-045] spent $0.00 of $0.20"
+}

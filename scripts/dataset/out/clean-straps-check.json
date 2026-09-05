@@ -1,0 +1,474 @@
+{
+  "accepted": [
+    10259,
+    10397,
+    10519,
+    11684,
+    13548,
+    13609,
+    13792,
+    15478,
+    15722,
+    16109,
+    17004,
+    17065,
+    20776,
+    25454,
+    25544,
+    26777,
+    26941,
+    26944,
+    27586,
+    27590,
+    27596,
+    27607,
+    27611,
+    29330,
+    29425,
+    32338,
+    32345,
+    32347,
+    40358,
+    45893,
+    45895,
+    51131,
+    51159,
+    52450,
+    52643,
+    52853,
+    54739,
+    54741,
+    54742,
+    54743,
+    54768,
+    54785,
+    55626,
+    55949,
+    56037,
+    56038,
+    56042,
+    56267,
+    59846,
+    59850,
+    60900,
+    60901,
+    60902,
+    60905,
+    60906,
+    62704,
+    62708,
+    62710,
+    62716,
+    63837,
+    64149,
+    64153,
+    68056,
+    68063,
+    68952,
+    68962,
+    68963,
+    70593,
+    71312,
+    71328,
+    72096,
+    74966,
+    9619
+  ],
+  "report": [
+    {
+      "productId": 10259,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 10397,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 10519,
+      "ok": true,
+      "hueDelta": 6
+    },
+    {
+      "productId": 11684,
+      "ok": true,
+      "hueDelta": 10
+    },
+    {
+      "productId": 13548,
+      "ok": true,
+      "hueDelta": 7
+    },
+    {
+      "productId": 13609,
+      "ok": true,
+      "hueDelta": 27
+    },
+    {
+      "productId": 13792,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 15478,
+      "ok": true,
+      "hueDelta": 9
+    },
+    {
+      "productId": 15722,
+      "ok": true,
+      "hueDelta": 15
+    },
+    {
+      "productId": 16109,
+      "ok": true,
+      "hueDelta": 21
+    },
+    {
+      "productId": 17004,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 17065,
+      "ok": true,
+      "hueDelta": 7
+    },
+    {
+      "productId": 20776,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 25454,
+      "ok": true,
+      "hueDelta": 21
+    },
+    {
+      "productId": 25533,
+      "ok": false,
+      "hueDelta": 0,
+      "reason": "render invented colour — 2.6x the source's saturation"
+    },
+    {
+      "productId": 25544,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 26777,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 26941,
+      "ok": true,
+      "hueDelta": 2
+    },
+    {
+      "productId": 26944,
+      "ok": true,
+      "hueDelta": 3
+    },
+    {
+      "productId": 27586,
+      "ok": true,
+      "hueDelta": 3
+    },
+    {
+      "productId": 27590,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 27596,
+      "ok": true,
+      "hueDelta": 6
+    },
+    {
+      "productId": 27607,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 27611,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 29330,
+      "ok": true,
+      "hueDelta": 14
+    },
+    {
+      "productId": 29425,
+      "ok": true,
+      "hueDelta": 6
+    },
+    {
+      "productId": 32338,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 32345,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 32347,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 40358,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 45893,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 45895,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 51131,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 51159,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 52450,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 52643,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 52853,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 54739,
+      "ok": true,
+      "hueDelta": 5
+    },
+    {
+      "productId": 54741,
+      "ok": true,
+      "hueDelta": 8
+    },
+    {
+      "productId": 54742,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 54743,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 54768,
+      "ok": true,
+      "hueDelta": 3
+    },
+    {
+      "productId": 54785,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 55626,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 55949,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 56037,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 56038,
+      "ok": true,
+      "hueDelta": 15
+    },
+    {
+      "productId": 56040,
+      "ok": false,
+      "hueDelta": 118,
+      "reason": "hue shifted 118°"
+    },
+    {
+      "productId": 56042,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 56267,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 59846,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 59850,
+      "ok": true,
+      "hueDelta": 9
+    },
+    {
+      "productId": 60900,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 60901,
+      "ok": true,
+      "hueDelta": 2
+    },
+    {
+      "productId": 60902,
+      "ok": true,
+      "hueDelta": 6
+    },
+    {
+      "productId": 60905,
+      "ok": true,
+      "hueDelta": 2
+    },
+    {
+      "productId": 60906,
+      "ok": true,
+      "hueDelta": 2
+    },
+    {
+      "productId": 62704,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 62708,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 62710,
+      "ok": true,
+      "hueDelta": 11
+    },
+    {
+      "productId": 62716,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 63837,
+      "ok": true,
+      "hueDelta": 3
+    },
+    {
+      "productId": 64149,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 64153,
+      "ok": true,
+      "hueDelta": 4
+    },
+    {
+      "productId": 64155,
+      "ok": false,
+      "hueDelta": 0,
+      "reason": "render invented colour — 3.1x the source's saturation"
+    },
+    {
+      "productId": 68056,
+      "ok": true,
+      "hueDelta": 8
+    },
+    {
+      "productId": 68063,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 68952,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 68962,
+      "ok": true,
+      "hueDelta": 2
+    },
+    {
+      "productId": 68963,
+      "ok": true,
+      "hueDelta": 0
+    },
+    {
+      "productId": 70593,
+      "ok": true,
+      "hueDelta": 3
+    },
+    {
+      "productId": 71312,
+      "ok": true,
+      "hueDelta": 6
+    },
+    {
+      "productId": 71328,
+      "ok": true,
+      "hueDelta": 17
+    },
+    {
+      "productId": 72096,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    },
+    {
+      "productId": 74966,
+      "ok": true,
+      "hueDelta": 1
+    },
+    {
+      "productId": 9619,
+      "ok": true,
+      "hueDelta": 0,
+      "reason": "too little saturated colour to compare hue"
+    }
+  ]
+}

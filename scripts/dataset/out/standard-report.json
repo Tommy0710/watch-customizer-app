@@ -1,0 +1,520 @@
+[
+  {
+    "id": 14007,
+    "name": "Brown Lizard Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 47% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 15783,
+    "name": "Vintage Light Violet Stingray Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 16498,
+    "name": "Steel Grey Alran Chevre Leather Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 17004,
+    "name": "Black Double Hornback Alligator Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 20776,
+    "name": "Light Pink Canvas Folded Edge Epsom Watch Strap",
+    "passes": 108,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 22559,
+    "name": "Alran Fat Nat Chevre Goat Red leather watch strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 25454,
+    "name": "Vintage Box Calf Black Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 25533,
+    "name": "Vintage Black Togo Leather Side-Stitch Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "strap colour does not match the catalog photo — render invented colour — 2.6x the source's saturation; re-render"
+  },
+  {
+    "id": 25544,
+    "name": "Vintage Grey Togo Leather Side-Stitch Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 26593,
+    "name": "Black Canvas mix Alligator Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 26777,
+    "name": "Dark Grey Babele Leather Watch Strap",
+    "passes": 97,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 26941,
+    "name": "Vintage Patina Golden Vachetta Leather Side-Stitch Strap",
+    "passes": 42,
+    "total": 114,
+    "reason": "watch had to be shrunk to 94% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 26944,
+    "name": "Vintage Golden Vachetta Leather Side-Stitch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 47% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 27586,
+    "name": "Vintage Tan Nubuck Leather Side-Stitch Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 27590,
+    "name": "Vintage Woody Brown Nubuck Leather Side-Stitch Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 27596,
+    "name": "Vintage Light Cream Nubuck Leather Side-Stitch Watch Strap",
+    "passes": 97,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 51131,
+    "name": "Patina Light Brown Vachetta Leather Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 51159,
+    "name": "Patina Brown Vachetta Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 51298,
+    "name": "Olive Waxed Badalassi Carlo Leather Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 52450,
+    "name": "Vintage Whiskey Pueblo Badalassi Carlo Leather Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 52451,
+    "name": "Vintage Dark Brown Pueblo Badalassi Carlo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 52% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 54739,
+    "name": "Tawny Brown Habana Leather Watch Strap",
+    "passes": 107,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 54767,
+    "name": "Double Padded Umber Brown Habana Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 54768,
+    "name": "Double Padded Tawny Brown Habana Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 55% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 54785,
+    "name": "Single Padded Tawny Brown Habana Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 55628,
+    "name": "Micro Stitch Navy Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 55629,
+    "name": "Micro Stitch Chocolate Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 55949,
+    "name": "Duocolor Orange Alran Sully Pearl White Epsom Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 44% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56033,
+    "name": "Duocolor Dark Brown Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56035,
+    "name": "Duocolor Forest Suede Red Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56036,
+    "name": "Duocolor Steel Grey Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56037,
+    "name": "Duocolor Dark Grey Alran Sully Leather Watch Strap",
+    "passes": 69,
+    "total": 114,
+    "reason": "watch had to be shrunk to 96% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 56038,
+    "name": "Duocolor Turquoise Alran Sully Leather Watch Strap",
+    "passes": 108,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 56040,
+    "name": "Duocolor Navy Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56041,
+    "name": "Duocolor Aqua Blue Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 56042,
+    "name": "Duocolor Moss Alran Sully Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 45% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 59850,
+    "name": "Vintage Navy Alran Fat Nat Cherve Goat Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 60901,
+    "name": "Vintage Navy Black Diamond Wagyu Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 60902,
+    "name": "Vintage Brown Black Diamond Wagyu Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 51% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 60905,
+    "name": "Padded Navy Black Diamond Wagyu Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 60906,
+    "name": "Padded Brown Black Diamond Wagyu Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 6201,
+    "name": "Miami Blue Epsom Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62703,
+    "name": "Padded Beige Peccary Leather Watch Strap",
+    "passes": 81,
+    "total": 114,
+    "reason": "watch had to be shrunk to 95% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 62704,
+    "name": "Padded Black Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62707,
+    "name": "Padded Dark Taupe Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62708,
+    "name": "Padded Golden Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62710,
+    "name": "Padded Light Olive Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 47% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62716,
+    "name": "Micro Stitch Cognac Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 47% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 62722,
+    "name": "Micro Stitch Light Olive Peccary Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 45% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 6286,
+    "name": "Olive Epsom Leather Watch Strap",
+    "passes": 91,
+    "total": 114,
+    "reason": "watch had to be shrunk to 95% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 6347,
+    "name": "Orange Epsom Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 63837,
+    "name": "Micro Stitch Olive Waxed Badalassi Carlo Leather Watch Strap",
+    "passes": 101,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 63838,
+    "name": "Micro Stitch Dark Aqua Blue Waxed Badalassi Carlo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 63839,
+    "name": "Micro Stitch Golden Brown Waxed Badalassi Carlo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 63841,
+    "name": "Micro Stitch Whiskey Waxed Badalassi Carlo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 64149,
+    "name": "40's Vintage Dark Olive Pueblo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 64150,
+    "name": "40's Vintage Navy Pueblo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 64153,
+    "name": "40's Vintage Dark Brown Pueblo Leather Watch Strap",
+    "passes": 76,
+    "total": 114,
+    "reason": "watch had to be shrunk to 96% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 64154,
+    "name": "40's Vintage Burgundy Pueblo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 48% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 64155,
+    "name": "40's Vintage Black Pueblo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 67980,
+    "name": "Red Vachetta Leather Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 68056,
+    "name": "Dark Brown Vachetta Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 68220,
+    "name": "Cognac Ostrich Leg Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 68241,
+    "name": "Curved End Cognac Ostrich Leg Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 47% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 68963,
+    "name": "Vintage Olive Swift Leather Watch Strap",
+    "passes": 101,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 71257,
+    "name": "Patina Dark Brown Vegetable Tanned Leather Watch Strap",
+    "passes": 35,
+    "total": 114,
+    "reason": "watch had to be shrunk to 93% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 71311,
+    "name": "Patina Light Brown Vegetable Tanned Leather Watch Strap",
+    "passes": 108,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 71317,
+    "name": "Patina Red Vegetable Tanned Leather Watch Strap",
+    "passes": 101,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 71327,
+    "name": "Patina Navy Vegetable Tanned Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 73226,
+    "name": "Curved End Navy Pueblo Leather Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 74807,
+    "name": "Padded Navy Sailcloth Rubber Watch Strap",
+    "passes": 110,
+    "total": 114,
+    "reason": "could not read the gap between the lugs, so the strap width and its alignment to the case are both guesses"
+  },
+  {
+    "id": 74988,
+    "name": "Padded Light Purple Sailcloth Rubber Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 50% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  },
+  {
+    "id": 75064,
+    "name": "Padded Light Grey Sailcloth Rubber Watch Strap",
+    "passes": 91,
+    "total": 114,
+    "reason": "watch had to be shrunk to 95% to fit the strap — re-render the strap rather than accept an undersized watch"
+  },
+  {
+    "id": 75113,
+    "name": "Padded White Sailcloth Rubber Watch Strap",
+    "passes": 0,
+    "total": 114,
+    "reason": "buckle side is 49% of the strap, not ~38% — the render made the two halves too alike in length; re-render"
+  }
+]

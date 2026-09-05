@@ -1,0 +1,10 @@
+{
+  "id": "5a4bbz7ppxrmt0d030jvx6d9ac",
+  "status": "succeeded",
+  "destination": "tommy0710/watch-lora-v2",
+  "trigger": "HNDDNW",
+  "output": {
+    "version": "tommy0710/watch-lora-v2:92e11109731d8fd4b3f1df002d8253d6d30eaebc4a6e09dedd587f9c64b9e156",
+    "weights": "https://replicate.delivery/xezq/FY2stSr1Ey7dAh8T568gTdrPleZ0LYYc2RLWIdiPgdLk6WiLA/trained_model.tar"
+  }
+}

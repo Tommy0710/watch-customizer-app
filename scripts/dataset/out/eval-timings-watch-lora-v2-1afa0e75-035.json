@@ -1,0 +1,209 @@
+{
+  "label": "watch-lora-v2-1afa0e75-035",
+  "strength": 0.35,
+  "model": "black-forest-labs/flux-dev-lora",
+  "trainingFile": "training.json",
+  "trainingVersion": "tommy0710/watch-lora-v2:1afa0e75de56efe946860ed850cc5e6d61256243932669cbb7c35846f85ac0cd",
+  "rows": [
+    {
+      "id": "024-vintage-woody-brown-nubuck-leather-side-stitch-watch-strap-straps-a-lange-so",
+      "productName": "Vintage Woody Brown Nubuck Leather Side-Stitch Watch Strap",
+      "seconds": 10.962,
+      "hasBaseline": false
+    },
+    {
+      "id": "025-orange-ostrich-leather-watch-strap-straps-a-lange-sohne-lange-1-101-021",
+      "productName": "Orange Ostrich leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "026-turquoise-epsom-leather-watch-strap-straps-a-lange-sohne-richard-lange-pour-",
+      "productName": "Turquoise Epsom Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "027-vintage-sesame-epsom-leather-slim-watch-strap-straps-a-lange-sohne-saxonia-2",
+      "productName": "Vintage Sesame Epsom Leather Slim Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "028-vintage-black-togo-leather-side-stitch-watch-strap-straps-a-lange-sohne-litt",
+      "productName": "Vintage Black Togo Leather Side-Stitch Watch Strap",
+      "seconds": 4.629,
+      "hasBaseline": false
+    },
+    {
+      "id": "029-light-olive-peccary-leather-watch-strap-straps-a-lange-sohne-1815-chronograp",
+      "productName": "Light Olive Peccary Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "030-padded-golden-peccary-leather-watch-strap-straps-a-lange-sohne-datograph-up-",
+      "productName": "Padded Golden Peccary Leather Watch Strap",
+      "seconds": 4.564,
+      "hasBaseline": false
+    },
+    {
+      "id": "031-micro-stitch-cognac-peccary-leather-watch-strap-straps-a-lange-sohne-grand-l",
+      "productName": "Micro Stitch Cognac Peccary Leather Watch Strap",
+      "seconds": 4.595,
+      "hasBaseline": false
+    },
+    {
+      "id": "032-vintage-light-olive-peccary-leather-watch-strap-straps-a-lange-sohne-lange-1",
+      "productName": "Vintage Light Olive Peccary Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "033-navy-pueblo-badalassi-carlo-leather-watch-strap-straps-a-lange-sohne-grand-l",
+      "productName": "Navy Pueblo Badalassi Carlo Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "034-40-s-vintage-dark-olive-pueblo-leather-watch-strap-straps-a-lange-sohne-moon",
+      "productName": "40's Vintage Dark Olive Pueblo Leather Watch Strap",
+      "seconds": 4.871,
+      "hasBaseline": false
+    },
+    {
+      "id": "035-vintage-navy-pueblo-badalassi-carlo-leather-watch-strap-straps-a-lange-sohne",
+      "productName": "Vintage Navy Pueblo Badalassi Carlo Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "037-navy-saffiano-leather-watch-strap-straps-a-lange-sohne-lange-1-stealth-plati",
+      "productName": "Navy Saffiano Leather Watch Strap",
+      "seconds": 4.713,
+      "hasBaseline": false
+    },
+    {
+      "id": "038-vintage-black-saffiano-leather-side-stitch-watch-strap-straps-a-lange-sohne-",
+      "productName": "Vintage Black Saffiano Leather Side-Stitch Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "039-curved-end-blue-sailcloth-rubber-lining-black-rubber-watch-strap-straps-a-la",
+      "productName": "Curved End Blue Sailcloth Rubber Lining Black Rubber Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "040-red-sailcloth-rubber-lining-red-swift-watch-strap-straps-a-lange-sohne-saxon",
+      "productName": "Red Sailcloth Rubber Lining Red Swift Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "041-orange-sailcloth-rubber-watch-strap-straps-a-lange-sohne-zeitwerk-lumen-142-",
+      "productName": "Orange Sailcloth Rubber Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "042-curved-end-padded-miami-blue-sailcloth-rubber-lining-navy-alran-sully-watch-",
+      "productName": "Curved End Padded Miami Blue Sailcloth Rubber Lining Navy Alran Sully Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "043-curved-end-padded-white-sailcloth-rubber-lining-moss-alran-sully-watch-strap",
+      "productName": "Curved End Padded White Sailcloth Rubber Lining Moss Alran Sully Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "044-padded-aqua-green-sailcloth-rubber-lining-brick-rubber-watch-strap-straps-a-",
+      "productName": "Padded Aqua Green Sailcloth Rubber Lining Brick Rubber Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "045-padded-purple-sailcloth-rubber-watch-strap-straps-a-lange-sohne-lange-1-daym",
+      "productName": "Padded Purple Sailcloth Rubber Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "046-jean-blue-shark-leather-watch-strap-straps-a-lange-sohne-saxonia-automatic-3",
+      "productName": "Jean Blue Shark Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "047-green-shell-cordovan-leather-watch-strap-straps-a-lange-sohne-zeitwerk-date-",
+      "productName": "Green Shell Cordovan Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "048-padded-dark-blue-shell-cordovan-lining-olive-epsom-leather-watch-strap-strap",
+      "productName": "Padded Dark Blue Shell Cordovan Lining Olive Epsom Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "049-dark-brown-smooth-calf-leather-watch-strap-straps-a-lange-sohne-1815-annual-",
+      "productName": "Dark Brown Smooth Calf Leather Watch Strap",
+      "seconds": 5.66,
+      "hasBaseline": false
+    },
+    {
+      "id": "050-vintage-turquoise-stingray-leather-watch-strap-straps-a-lange-sohne-datograp",
+      "productName": "Vintage Turquoise Stingray Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "051-beige-suede-leather-watch-strap-straps-a-lange-sohne-1815-235-026",
+      "productName": "Beige Suede Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "052-vintage-purple-suede-leather-watch-strap-straps-a-lange-sohne-lange-1-moon-p",
+      "productName": "Vintage Purple Suede Leather Watch Strap",
+      "seconds": 4.71,
+      "hasBaseline": false
+    },
+    {
+      "id": "053-white-swift-leather-watch-strap-straps-a-lange-sohne-1815-rattrapante-425-02",
+      "productName": "White Swift Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "054-vintage-olive-swift-leather-watch-strap-straps-a-lange-sohne-zeitwerk-140-03",
+      "productName": "Vintage Olive Swift Leather Watch Strap",
+      "seconds": 4.379,
+      "hasBaseline": false
+    },
+    {
+      "id": "055-navy-vachetta-leather-watch-strap-straps-a-lange-sohne-grand-lange-1-moon-ph",
+      "productName": "Navy Vachetta Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "056-patina-brown-slash-vachetta-leather-watch-strap-straps-a-lange-sohne-saxonia",
+      "productName": "Patina Brown Slash Vachetta Leather Watch Strap",
+      "hasBaseline": false,
+      "error": "missing clean render"
+    },
+    {
+      "id": "057-vintage-golden-vachetta-leather-side-stitch-strap-straps-a-lange-sohne-saxon",
+      "productName": "Vintage Golden Vachetta Leather Side-Stitch Strap",
+      "seconds": 4.744,
+      "hasBaseline": false
+    }
+  ],
+  "meanSeconds": 5.3827,
+  "spend": "[eval-style:watch-lora-v2-1afa0e75-035] spent $0.40 of $0.40"
+}

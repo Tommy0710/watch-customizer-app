@@ -1,0 +1,8 @@
+{
+  "id": "2fq1n1rrhxrmt0czz3fazs4bcg",
+  "status": "succeeded",
+  "output": {
+    "version": "tommy0710/watch-lora-v2:4b720caca7f00746ec134a3da799aaa37d07aa6f3f190f8233fadfa25c26ac65",
+    "weights": "https://replicate.delivery/xezq/OmPvjKcS3GqdOddNbDvGmcG4ZumUu2XKHkWcIDFD5fGL3WhLA/trained_model.tar"
+  }
+}
